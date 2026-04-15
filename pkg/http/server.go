@@ -8,10 +8,13 @@ import (
 	"net/http"
 	"strconv"
 
+	_ "github.com/AGODOVALOV/grader/docs"
 	"github.com/AGODOVALOV/grader/pkg/http/config"
 	"github.com/AGODOVALOV/grader/pkg/http/handler"
+	"github.com/AGODOVALOV/grader/pkg/http/handler/user"
 	"github.com/AGODOVALOV/grader/pkg/http/middleware"
 	"github.com/AGODOVALOV/grader/pkg/logger"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 //go:embed templates/*.html
@@ -25,11 +28,12 @@ func NewServer(ctx context.Context, cfg config.Config) *Server {
 
 	tmpl := template.Must(template.ParseFS(templateFS, "templates/*.html"))
 
-	userHandler := handler.NewUserHandler(tmpl)
+	userHandler := user.NewUserHandler(tmpl)
 
 	// user routes
 	router := handler.NewRouter()
-	router.Mux.HandleFunc("/user/login", userHandler.Login)
+	router.Mux.HandleFunc("GET /user/login", userHandler.Login)
+	router.Mux.Handle("/swagger/", httpSwagger.WrapHandler)
 
 	//admin routes
 
