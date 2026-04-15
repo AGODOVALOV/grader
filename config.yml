@@ -1,0 +1,15 @@
+app:
+  name: grader
+
+log:
+  level: debug
+  encoding: json
+  name: grader
+
+web_server:
+  host: localhost
+  port: 8080
+  read_timeout: 10s
+  write_timeout: 10s
+  idle_timeout: 60s
+  shutdown_timeout: 5s
