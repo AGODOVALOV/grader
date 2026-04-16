@@ -24,7 +24,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/user.LoginRequest"
+                            "$ref": "#/definitions/handler.LoginRequest"
                         }
                     }
                 ],
@@ -32,13 +32,13 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/user.LoginResponse"
+                            "$ref": "#/definitions/handler.LoginResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/user.ErrorResponse"
+                            "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     }
                 }
@@ -46,7 +46,7 @@
         }
     },
     "definitions": {
-        "user.ErrorResponse": {
+        "handler.ErrorResponse": {
             "type": "object",
             "properties": {
                 "message": {
@@ -54,7 +54,7 @@
                 }
             }
         },
-        "user.LoginRequest": {
+        "handler.LoginRequest": {
             "type": "object",
             "properties": {
                 "login": {
@@ -65,7 +65,7 @@
                 }
             }
         },
-        "user.LoginResponse": {
+        "handler.LoginResponse": {
             "type": "object",
             "properties": {
                 "token": {

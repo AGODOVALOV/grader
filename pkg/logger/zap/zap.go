@@ -1,3 +1,4 @@
+// Package zaplogger provides logging functionality using zap.
 package zaplogger
 
 import (
@@ -7,12 +8,14 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+// ZLoggerConfig defines the configuration for a logger, including level, encoding format, and logger name.
 type ZLoggerConfig struct {
 	Level    string
 	Encoding string
 	Name     string
 }
 
+// NewLogger creates and returns a new initialized zap.Logger based on the provided ZLoggerConfig configuration.
 func NewLogger(c ZLoggerConfig) (*zap.Logger, error) {
 	cfg := zap.NewProductionConfig()
 	cfg.Level = zap.NewAtomicLevelAt(parseZapLevel(c.Level))

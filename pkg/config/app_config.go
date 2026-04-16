@@ -1,3 +1,4 @@
+// Package config create application config
 package config
 
 import (
@@ -5,19 +6,19 @@ import (
 	"os"
 
 	"github.com/AGODOVALOV/grader/pkg/config/config"
-	appCfg "github.com/AGODOVALOV/grader/pkg/config/config"
 	"github.com/AGODOVALOV/grader/pkg/config/loader"
 	"github.com/AGODOVALOV/grader/pkg/config/service/validator"
 	"github.com/AGODOVALOV/grader/pkg/config/service/watcher"
 )
 
 const (
-	ENVConfigPath     = "QPROC_CONFIG_PATH"
-	ENVConfigFileName = "QPROC_CONFIG_FILE_NAME"
+	envConfigPath     = "GRADER_CONFIG_PATH"
+	envConfigFileName = "GRADER_CONFIG_FILE_NAME"
 	defaultPath       = "./"
 	defaultFileName   = "config.yml"
 )
 
+// Config manages the application's configuration, including loading, validating, watching, and reloading configuration data.
 type Config struct {
 	appConfig *config.Config
 	loader    *loader.ConfigLoader
@@ -25,7 +26,8 @@ type Config struct {
 	watcher   *watcher.Watcher
 }
 
-func NewConfig(path string, name string) *Config {
+// NewConfig creates a new Config instance.
+func NewConfig(path, name string) *Config {
 	return &Config{
 		appConfig: &config.Config{},
 		loader:    loader.NewConfigLoader(path, name),
@@ -34,6 +36,7 @@ func NewConfig(path string, name string) *Config {
 	}
 }
 
+// Load loads the application configuration from the specified path and name.
 func (cfg *Config) Load() error {
 	appConfig, err := cfg.loader.Load()
 	if err != nil {
@@ -49,17 +52,20 @@ func (cfg *Config) Load() error {
 	return nil
 }
 
-func (cfg *Config) ReLoad() (*appCfg.Config, error) {
-	newCfg := &appCfg.Config{}
-	if err := cfg.loader.Viper.ReadInConfig(); err != nil {
+// ReLoad reloads the application configuration from the specified path and name.
+func (cfg *Config) ReLoad() (*config.Config, error) {
+	newCfg := &config.Config{}
+	err := cfg.loader.Viper.ReadInConfig()
+	if err != nil {
 		return nil, err
 	}
 
-	if err := cfg.loader.Viper.Unmarshal(newCfg); err != nil {
+	err = cfg.loader.Viper.Unmarshal(newCfg)
+	if err != nil {
 		return nil, err
 	}
 
-	err := cfg.validator.Validate(newCfg)
+	err = cfg.validator.Validate(newCfg)
 	if err != nil {
 		return nil, err
 	}
@@ -67,21 +73,24 @@ func (cfg *Config) ReLoad() (*appCfg.Config, error) {
 	return newCfg, nil
 }
 
+// GetConfig returns the application configuration.
 func (cfg *Config) GetConfig() *config.Config {
 	return cfg.appConfig
 }
 
+// Watch watches for changes in the application configuration and notifies the provided channel when a change is detected.
 func (cfg *Config) Watch(ctx context.Context, newConfigSignal chan<- struct{}) {
 	cfg.watcher.Watch(ctx, cfg.loader.Viper, newConfigSignal)
 }
 
+// GetApplicationConfig returns the application configuration.
 func GetApplicationConfig() (*Config, error) {
-	configPath := os.Getenv(ENVConfigPath)
+	configPath := os.Getenv(envConfigPath)
 	if configPath == "" {
 		configPath = defaultPath
 	}
 
-	configFileName := os.Getenv(ENVConfigFileName)
+	configFileName := os.Getenv(envConfigFileName)
 	if configFileName == "" {
 		configFileName = defaultFileName
 	}

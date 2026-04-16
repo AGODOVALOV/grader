@@ -1,17 +1,17 @@
 definitions:
-  user.ErrorResponse:
+  handler.ErrorResponse:
     properties:
       message:
         type: string
     type: object
-  user.LoginRequest:
+  handler.LoginRequest:
     properties:
       login:
         type: string
       password:
         type: string
     type: object
-  user.LoginResponse:
+  handler.LoginResponse:
     properties:
       token:
         type: string
@@ -30,18 +30,18 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/user.LoginRequest'
+          $ref: '#/definitions/handler.LoginRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/user.LoginResponse'
+            $ref: '#/definitions/handler.LoginResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/user.ErrorResponse'
+            $ref: '#/definitions/handler.ErrorResponse'
       summary: User login
       tags:
       - auth

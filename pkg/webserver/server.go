@@ -1,4 +1,5 @@
-package http
+// Package webserver provides an HTTP server.
+package webserver
 
 import (
 	"context"
@@ -8,36 +9,35 @@ import (
 	"net/http"
 	"strconv"
 
-	_ "github.com/AGODOVALOV/grader/docs"
-	"github.com/AGODOVALOV/grader/pkg/http/config"
-	"github.com/AGODOVALOV/grader/pkg/http/handler"
-	"github.com/AGODOVALOV/grader/pkg/http/handler/user"
-	"github.com/AGODOVALOV/grader/pkg/http/middleware"
 	"github.com/AGODOVALOV/grader/pkg/logger"
-	httpSwagger "github.com/swaggo/http-swagger"
+	"github.com/AGODOVALOV/grader/pkg/webserver/config"
+	"github.com/AGODOVALOV/grader/pkg/webserver/handler"
+	"github.com/AGODOVALOV/grader/pkg/webserver/middleware"
+	"github.com/swaggo/http-swagger"
 )
 
 //go:embed templates/*.html
 var templateFS embed.FS
 
+// Server represents the HTTP server.
 type Server struct {
 	server *http.Server
 }
 
+// NewServer creates a new HTTP server.
 func NewServer(ctx context.Context, cfg config.Config) *Server {
-
 	tmpl := template.Must(template.ParseFS(templateFS, "templates/*.html"))
 
-	userHandler := user.NewUserHandler(tmpl)
+	userHandler := handler.NewUserHandler(tmpl)
 
 	// user routes
 	router := handler.NewRouter()
 	router.Mux.HandleFunc("GET /user/login", userHandler.Login)
 	router.Mux.Handle("/swagger/", httpSwagger.WrapHandler)
 
-	//admin routes
+	// admin routes
 
-	//middleware
+	// middleware
 	handlerMux := middleware.AccessLogWithCtx(ctx, router.Mux)
 
 	server := &http.Server{
@@ -53,6 +53,7 @@ func NewServer(ctx context.Context, cfg config.Config) *Server {
 	}
 }
 
+// ListenAndServe starts the HTTP server.
 func (s *Server) ListenAndServe(ctx context.Context) {
 	const op = "server.ListenAndServe"
 	err := s.server.ListenAndServe()

@@ -1,3 +1,4 @@
+// Package loader provides functionality for loading configuration files.
 package loader
 
 import (
@@ -8,13 +9,15 @@ import (
 	"github.com/AGODOVALOV/grader/pkg/config/config"
 )
 
+// ConfigLoader is responsible for loading and unmarshalling configuration files into a structured configuration object.
 type ConfigLoader struct {
 	Viper *viper.Viper
 	path  string
 	name  string
 }
 
-func NewConfigLoader(p string, n string) *ConfigLoader {
+// NewConfigLoader creates a new ConfigLoader instance.
+func NewConfigLoader(p, n string) *ConfigLoader {
 	return &ConfigLoader{
 		Viper: viper.New(),
 		path:  p,
@@ -22,6 +25,7 @@ func NewConfigLoader(p string, n string) *ConfigLoader {
 	}
 }
 
+// Load loads and unmarshals the configuration file into a structured configuration object.
 func (loader *ConfigLoader) Load() (*config.Config, error) {
 	loader.Viper.AddConfigPath(loader.path)
 	loader.Viper.SetConfigName(loader.name)
@@ -29,20 +33,23 @@ func (loader *ConfigLoader) Load() (*config.Config, error) {
 	loader.Viper.SetDefault("log.level", "info")
 	loader.Viper.SetDefault("log.encoding", "json")
 
-	if err := loader.Viper.ReadInConfig(); err != nil {
+	err := loader.Viper.ReadInConfig()
+	if err != nil {
 		return nil, fmt.Errorf("error reading config: %w", err)
 	}
 
 	var cfg config.Config
 
-	if err := loader.Viper.Unmarshal(&cfg); err != nil {
+	err = loader.Viper.Unmarshal(&cfg)
+	if err != nil {
 		return nil, fmt.Errorf("unable to decode into struct: %w", err)
 	}
 
 	return &cfg, nil
 }
 
-func LoadConfig(path string, name string) (*config.Config, error) {
+// LoadConfig reads a configuration file from the given path and name, unmarshals it into a Config struct, and returns it.
+func LoadConfig(path, name string) (*config.Config, error) {
 	v := viper.New()
 	v.AddConfigPath(path)
 	v.SetConfigName(name)
@@ -50,13 +57,15 @@ func LoadConfig(path string, name string) (*config.Config, error) {
 	v.SetDefault("log.level", "info")
 	v.SetDefault("log.encoding", "json")
 
-	if err := v.ReadInConfig(); err != nil {
+	err := v.ReadInConfig()
+	if err != nil {
 		return nil, fmt.Errorf("error reading config: %w", err)
 	}
 
 	var cfg config.Config
 
-	if err := v.Unmarshal(&cfg); err != nil {
+	err = v.Unmarshal(&cfg)
+	if err != nil {
 		return nil, fmt.Errorf("unable to decode into struct: %w", err)
 	}
 

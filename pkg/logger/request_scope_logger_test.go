@@ -1,16 +1,17 @@
-package logger
+package logger_test
 
 import (
 	"context"
 	"fmt"
 	"testing"
 
+	"github.com/AGODOVALOV/grader/pkg/logger"
 	"github.com/AGODOVALOV/grader/pkg/logger/config"
 )
 
-func TestRequestScopeLogger(t *testing.T) {
+func TestRequestScopeLogger(_ *testing.T) {
 	// create logger
-	z, err := NewAppLogger(config.Config{
+	z, err := logger.NewAppLogger(config.Config{
 		Level:    "debug",
 		Encoding: "json",
 		Name:     "test logger",
@@ -23,14 +24,14 @@ func TestRequestScopeLogger(t *testing.T) {
 	// ctx
 	ctx, cancel := context.WithCancel(context.Background())
 	// ctx add logger
-	ctx = CtxWithLogger(ctx, z)
+	ctx = logger.CtxWithLogger(ctx, z)
 	defer cancel()
 
-	newCtx := NewCtxLoggerWithExtraFields(ctx, map[string]string{"messageID": "msq1"})
+	newCtx := logger.NewCtxLoggerWithExtraFields(ctx, map[string]string{"messageID": "msq1"})
 
-	Z(ctx).Info(ctx, "test without extra", "test without extra")
+	logger.Z(ctx).Info(ctx, "test without extra", "test without extra")
 
-	Z(newCtx).Info(ctx, "test with extra", "test with extra")
+	logger.Z(newCtx).Info(ctx, "test with extra", "test with extra")
 
-	Z(newCtx).Info(ctx, "test with extra", "test with extra", map[string]string{"extraField": "ExtraValue"})
+	logger.Z(newCtx).Info(ctx, "test with extra", "test with extra", map[string]string{"extraField": "ExtraValue"})
 }

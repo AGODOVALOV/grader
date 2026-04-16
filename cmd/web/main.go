@@ -1,3 +1,4 @@
+// Package main contains the main function for the web server.
 package main
 
 import (
@@ -7,12 +8,12 @@ import (
 	"strconv"
 
 	"github.com/AGODOVALOV/grader/pkg/config"
-	server "github.com/AGODOVALOV/grader/pkg/http"
 	"github.com/AGODOVALOV/grader/pkg/logger"
+	server "github.com/AGODOVALOV/grader/pkg/webserver"
 )
 
+// main initializes the application by loading configuration, setting up the logger, and starting the web server.
 func main() {
-
 	// create and read config
 	appCfg, err := config.GetApplicationConfig()
 	if err != nil {
@@ -33,7 +34,7 @@ func main() {
 	ctx = logger.CtxWithLogger(ctx, z)
 	defer cancel()
 
-	//start web server
+	// start web server
 	z.Info(
 		ctx,
 		"web server",
@@ -42,5 +43,4 @@ func main() {
 			"url": net.JoinHostPort(appCfg.GetConfig().WebServer.Host, strconv.Itoa(appCfg.GetConfig().WebServer.Port)),
 		})
 	server.NewServer(ctx, appCfg.GetConfig().WebServer).ListenAndServe(ctx)
-
 }

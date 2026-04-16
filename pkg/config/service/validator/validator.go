@@ -1,3 +1,4 @@
+// Package validator validate config
 package validator
 
 import (
@@ -6,12 +7,14 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-const ValidationAMPQURI = "amqpuri"
+const validationAMPQURI = "amqpuri"
 
+// Validator is a wrapper around the validator.Validate library for struct and field validation in Go.
 type Validator struct {
 	validator *validator.Validate
 }
 
+// NewValidator creates a new Validator instance.
 func NewValidator() *Validator {
 	validate := validator.New()
 	return &Validator{
@@ -19,6 +22,7 @@ func NewValidator() *Validator {
 	}
 }
 
+// Validate validates the given struct.
 func (v *Validator) Validate(i any) error {
 	err := v.registerValidationAMPQURI()
 	if err != nil {
@@ -28,7 +32,7 @@ func (v *Validator) Validate(i any) error {
 }
 
 func (v *Validator) registerValidationAMPQURI() error {
-	err := v.validator.RegisterValidation(ValidationAMPQURI, func(fl validator.FieldLevel) bool {
+	err := v.validator.RegisterValidation(validationAMPQURI, func(fl validator.FieldLevel) bool {
 		u, err := url.Parse(fl.Field().String())
 		if err != nil {
 			return false

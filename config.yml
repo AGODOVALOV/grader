@@ -6,10 +6,10 @@ log:
   encoding: json
   name: grader
 
-web_server:
+web-server:
   host: localhost
   port: 8080
-  read_timeout: 10s
-  write_timeout: 10s
-  idle_timeout: 60s
-  shutdown_timeout: 5s
+  read-timeout: 10s
+  write-timeout: 10s
+  idle-timeout: 60s
+  shutdown-timeout: 5s
