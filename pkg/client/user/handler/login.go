@@ -1,9 +1,8 @@
-// Package handler creates webserver handlers
+// Package handler creates client handlers
 package handler
 
 import (
 	"fmt"
-	"html/template"
 	"net/http"
 )
 
@@ -16,18 +15,6 @@ type LoginRequest struct {
 // LoginResponse represents the response after successful user login containing a JWT token.
 type LoginResponse struct {
 	Token string `json:"token"`
-}
-
-// UserHandler handles user-related operations.
-type UserHandler struct {
-	template *template.Template
-}
-
-// NewUserHandler creates a new UserHandler instance.
-func NewUserHandler(t *template.Template) UserHandler {
-	return UserHandler{
-		template: t,
-	}
 }
 
 // ErrorResponse represents an error response.

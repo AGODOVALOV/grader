@@ -2,8 +2,9 @@
 package config
 
 import (
+	client "github.com/AGODOVALOV/grader/pkg/client/config"
+	dbconfig "github.com/AGODOVALOV/grader/pkg/infra/db/postgres/config"
 	loggerconfig "github.com/AGODOVALOV/grader/pkg/logger/config"
-	webconfig "github.com/AGODOVALOV/grader/pkg/webserver/config"
 )
 
 // Config represents the top-level configuration structure for the application.
@@ -14,5 +15,7 @@ type Config struct {
 
 	Log loggerconfig.Config `mapstructure:"log" validate:"required"`
 
-	WebServer webconfig.Config `mapstructure:"web-server" validate:"required"`
+	WebServer client.Config `mapstructure:"web-server" validate:"required"`
+
+	DB dbconfig.Config `mapstructure:"postgres" validate:"required"`
 }

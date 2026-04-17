@@ -1,4 +1,4 @@
-// Package config contains webserver server config
+// Package config contains client server config
 package config
 
 import "time"

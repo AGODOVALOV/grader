@@ -94,7 +94,7 @@ func (z AppLogger) Debug(ctx context.Context, action, message string, extraField
 	defer func(logger *zap.Logger) {
 		err := logger.Sync()
 		if err != nil {
-			fmt.Println(err)
+			//fmt.Println(err)
 		}
 	}(z.logger)
 	fields := z.getExtraFields(ctx, ef)
@@ -113,7 +113,7 @@ func (z AppLogger) Info(ctx context.Context, action, message string, extraFields
 	defer func(logger *zap.Logger) {
 		err := logger.Sync()
 		if err != nil {
-			fmt.Println(err)
+			//fmt.Println(err)
 		}
 	}(z.logger)
 	fields := z.getExtraFields(ctx, ef)
@@ -132,7 +132,7 @@ func (z AppLogger) Warn(ctx context.Context, action, message string, extraFields
 	defer func(logger *zap.Logger) {
 		err := logger.Sync()
 		if err != nil {
-			fmt.Println(err)
+			//fmt.Println(err)
 		}
 	}(z.logger)
 	fields := z.getExtraFields(ctx, ef)
@@ -151,7 +151,7 @@ func (z AppLogger) Error(ctx context.Context, action, message string, extraField
 	defer func(logger *zap.Logger) {
 		err := logger.Sync()
 		if err != nil {
-			fmt.Println(err)
+			//fmt.Println(err)
 		}
 	}(z.logger)
 	fields := z.getExtraFields(ctx, ef)
@@ -170,7 +170,7 @@ func (z AppLogger) Fatal(ctx context.Context, action, message string, extraField
 	defer func(logger *zap.Logger) {
 		err := logger.Sync()
 		if err != nil {
-			fmt.Println(err)
+			//fmt.Println(err)
 		}
 	}(z.logger)
 	fields := z.getExtraFields(ctx, ef)
