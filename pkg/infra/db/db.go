@@ -2,14 +2,14 @@ package db
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/AGODOVALOV/grader/pkg/config/config"
 	"github.com/AGODOVALOV/grader/pkg/infra/db/postgres"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type RepoDB struct {
-	db *sql.DB
+	Pool *pgxpool.Pool
 }
 
 func NewRepoDB(ctx context.Context, cfg *config.Config) (*RepoDB, error) {
@@ -19,5 +19,5 @@ func NewRepoDB(ctx context.Context, cfg *config.Config) (*RepoDB, error) {
 		return nil, err
 	}
 
-	return &RepoDB{db: db}, nil
+	return &RepoDB{Pool: db}, nil
 }

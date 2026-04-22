@@ -9,10 +9,14 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/AGODOVALOV/grader/pkg/client/config"
-	handler2 "github.com/AGODOVALOV/grader/pkg/client/user/handler"
-	"github.com/AGODOVALOV/grader/pkg/client/user/middleware"
+	_ "github.com/AGODOVALOV/grader/docs/swagger"
+	"github.com/AGODOVALOV/grader/pkg/client/middleware"
+	"github.com/AGODOVALOV/grader/pkg/client/user"
+	"github.com/AGODOVALOV/grader/pkg/client/user/repo"
+	"github.com/AGODOVALOV/grader/pkg/client/user/usecase"
+	"github.com/AGODOVALOV/grader/pkg/config/config"
 	"github.com/AGODOVALOV/grader/pkg/logger"
+	"github.com/AGODOVALOV/grader/pkg/token"
 	"github.com/swaggo/http-swagger"
 )
 
@@ -22,37 +26,41 @@ var templateFS embed.FS
 // Server represents the HTTP server.
 type Server struct {
 	server *http.Server
+	user   *user.User
+	token  token.Maker
 }
 
 // NewClientServer creates a new HTTP server.
-func NewClientServer(ctx context.Context, cfg config.Config) *Server {
+func NewClientServer(ctx context.Context, cfg *config.Config, repo *repo.Repo) (*Server, error) {
 	tmpl := template.Must(template.ParseFS(templateFS, "html/templates/*.html"))
 
-	userHandler := handler2.NewUserHandler(tmpl)
+	tokenMaker, err := token.NewJWTMaker(&cfg.Token)
+	if err != nil {
+		return nil, err
+	}
 
-	// user routes
-	router := http.NewServeMux()
-	router.HandleFunc("GET /user/login", userHandler.Login)
-	router.HandleFunc("GET /user/register", userHandler.Register)
-	router.HandleFunc("GET /user/account/{userID}", userHandler.Account)
-	router.Handle("/swagger/", httpSwagger.WrapHandler)
+	usr := user.NewUser(tmpl, usecase.NewUserService(repo, tokenMaker))
 
-	// admin routes
+	// configure router
+	r := configureRouter(usr)
 
-	// middleware
-	handlerMux := middleware.AccessLogWithCtx(ctx, router)
+	// add middleware
+	handlerMux := middleware.AccessLogWithCtx(ctx, r)
+	handlerMux = middleware.Auth(tokenMaker, handlerMux)
 
-	server := &http.Server{
-		Addr:         net.JoinHostPort(cfg.Host, strconv.Itoa(cfg.Port)),
+	srv := &http.Server{
+		Addr:         net.JoinHostPort(cfg.WebServer.Host, strconv.Itoa(cfg.WebServer.Port)),
 		Handler:      handlerMux,
-		ReadTimeout:  cfg.ReadTimeout,
-		WriteTimeout: cfg.WriteTimeout,
-		IdleTimeout:  cfg.IdleTimeout,
+		ReadTimeout:  cfg.WebServer.ReadTimeout,
+		WriteTimeout: cfg.WebServer.WriteTimeout,
+		IdleTimeout:  cfg.WebServer.IdleTimeout,
 	}
 
 	return &Server{
-		server: server,
-	}
+		server: srv,
+		user:   usr,
+		token:  tokenMaker,
+	}, nil
 }
 
 // ListenAndServe starts the HTTP server.
@@ -62,4 +70,18 @@ func (s *Server) ListenAndServe(ctx context.Context) {
 	if err != nil {
 		logger.Z(ctx).Error(ctx, op, err.Error())
 	}
+}
+
+func configureRouter(u *user.User) *http.ServeMux {
+	router := http.NewServeMux()
+	router.HandleFunc("GET /user/login", u.Handler.Login)
+	router.HandleFunc("GET /user/register", u.Handler.Register)
+	router.HandleFunc("GET /user/account/{userID}", u.Handler.Account)
+
+	router.HandleFunc("POST /user/create", u.Handler.CreateUser)
+	router.HandleFunc("POST /user/login", u.Handler.LoginUser)
+
+	router.Handle("/swagger/", httpSwagger.WrapHandler)
+
+	return router
 }

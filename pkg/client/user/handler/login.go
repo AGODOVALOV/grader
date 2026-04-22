@@ -2,19 +2,23 @@
 package handler
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
+
+	"github.com/AGODOVALOV/grader/pkg/common"
 )
 
-// LoginRequest represents the payload for user login containing login credentials.
-type LoginRequest struct {
+// LoginUserRequest represents the payload for a user login containing login credentials.
+type LoginUserRequest struct {
 	Login    string `json:"login"`
 	Password string `json:"password"`
 }
 
-// LoginResponse represents the response after successful user login containing a JWT token.
-type LoginResponse struct {
-	Token string `json:"token"`
+// LoginUserResponse represents the response after a successful user login containing a JWT token.
+type LoginUserResponse struct {
+	AccessToken string       `json:"access_token"`
+	User        UserResponse `json:"user"`
 }
 
 // ErrorResponse represents an error response.
@@ -23,18 +27,79 @@ type ErrorResponse struct {
 }
 
 // Login godoc
-// @Summary User login
+// @Summary User login page
 // @Description Login with username and password
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Param request body LoginRequest true "login request"
-// @Success 200 {object} LoginResponse
-// @Failure 400 {object} ErrorResponse
-// @Router /user/login [post].
+// @Router /user/login [get].
 func (h *UserHandler) Login(w http.ResponseWriter, _ *http.Request) {
 	err := h.template.ExecuteTemplate(w, "login.html", nil)
 	if err != nil {
 		fmt.Println(err)
 	}
+}
+
+// LoginUser godoc
+// @Summary User login
+// @Description Login with username and password
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body LoginUserRequest true "login request"
+// @Success 200 {object} LoginUserResponse
+// @Failure 400 {object} ErrorResponse
+// @Router /user/login [post].
+func (h *UserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
+	login := r.FormValue("login")
+	password := r.FormValue("password")
+
+	userID, err := h.Service.CheckUserLogin(r.Context(), login, password)
+
+	if err != nil {
+		if errors.Is(err, common.ErrRecordNotFound) {
+			http.Error(w, "User not found", http.StatusNotFound)
+			return
+		}
+
+		if errors.Is(err, common.ErrIncorrectPassword) {
+			http.Error(w, "Incorrect password", http.StatusUnauthorized)
+			return
+		}
+
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	isAdmin, err := h.Service.CheckUserIsAdmin(r.Context(), login)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// create token
+	jwtToken, payload, err := h.Service.GetNewToken(userID, login)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// use in cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:     "access_token",
+		Value:    jwtToken,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   false,
+		SameSite: http.SameSiteLaxMode,
+		Expires:  payload.ExpiredAt,
+	})
+
+	if isAdmin {
+		http.Redirect(w, r, "/admin", http.StatusFound)
+		return
+	}
+
+	http.Redirect(w, r, fmt.Sprintf("/user/account/%d", userID), http.StatusFound)
+
 }

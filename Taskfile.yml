@@ -78,4 +78,9 @@ tasks:
     desc: "Generates swagger files"
     cmds:
       - |
-        swag init -g ./cmd/web/main.go -o ./docs/swagger
+        swag init -g cmd/client/*.go -o ./docs/swagger
+  sqlc-generate:
+    desc: "Generate sqlc files"
+    cmds:
+      - |
+        sqlc generate

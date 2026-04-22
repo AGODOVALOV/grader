@@ -1,5 +1,26 @@
 definitions:
+  handler.CreateUserRequest:
+    properties:
+      confirm_password:
+        type: string
+      login:
+        type: string
+      name:
+        type: string
+      password:
+        type: string
+    type: object
+  handler.CreateUserResponse:
+    properties:
+      id:
+        type: integer
+    type: object
   handler.ErrorResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  handler.ErrorResponseCreateUser:
     properties:
       message:
         type: string
@@ -19,7 +40,43 @@ definitions:
 info:
   contact: {}
 paths:
+  /user/create:
+    post:
+      consumes:
+      - application/json
+      description: CreateUser with username and password
+      parameters:
+      - description: login request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.CreateUserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponseCreateUser'
+      summary: User login create
+      tags:
+      - auth
   /user/login:
+    get:
+      consumes:
+      - application/json
+      description: Login with username and password
+      produces:
+      - application/json
+      responses: {}
+      summary: User login page
+      tags:
+      - auth
     post:
       consumes:
       - application/json

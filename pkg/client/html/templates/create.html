@@ -1,35 +1,137 @@
 <!DOCTYPE html>
+
 <html lang="en">
+
 <head>
-    <!-- Required meta tags -->
+
     <meta charset="utf-8">
+
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css"
-          integrity="sha384-/Y6pD6FV/Vv2HJnA6t+vslU6fwYXjCFtcEpHbNJ0lyAFsXTsjBbfaDjzALeQsN6M" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css">
+
     <title>Grader registration</title>
+
 </head>
+
 <body>
+
 <div class="container mt-5">
+
     <h1>Grader registration</h1>
-    <form method="POST" action="/register">
+
+    <form method="POST" action="/user/create">
+
         <div class="form-group">
+
             <label for="login">Login</label>
+
             <input type="text" class="form-control" name="login" id="login" placeholder="Enter login" required>
+
         </div>
+
         <div class="form-group">
+
+            <label for="name">Name</label>
+
+            <!-- FIXED name attribute -->
+
+            <input type="text" class="form-control" name="name" id="name" placeholder="Enter name" required>
+
+        </div>
+
+        <div class="form-group">
+
             <label for="password">Password</label>
-            <input type="password" class="form-control" name="password" id="password" placeholder="Enter password"
-                   required>
+
+            <input type="password" class="form-control" name="password" id="password"
+
+                   placeholder="Enter password" required>
+
         </div>
+
         <div class="form-group">
+
             <label for="confirm_password">Confirm Password</label>
+
             <input type="password" class="form-control" name="confirm_password" id="confirm_password"
+
                    placeholder="Confirm password" required>
+
         </div>
+
         <button type="submit" class="btn btn-primary">Register</button>
+
     </form>
+
 </div>
+
+<script>
+
+    const password = document.getElementById("password");
+
+    const confirm = document.getElementById("confirm_password");
+
+    function validatePasswords() {
+
+        if (password.value !== confirm.value) {
+
+            confirm.setCustomValidity("Passwords do not match");
+
+        } else {
+
+            confirm.setCustomValidity("");
+
+        }
+
+    }
+
+    password.addEventListener("input", validatePasswords);
+
+    confirm.addEventListener("input", validatePasswords);
+
+</script>
+
 </body>
+
 </html>
+
+<!--<!DOCTYPE html>-->
+<!--<html lang="en">-->
+<!--<head>-->
+<!--    &lt;!&ndash; Required meta tags &ndash;&gt;-->
+<!--    <meta charset="utf-8">-->
+<!--    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">-->
+
+<!--    &lt;!&ndash; Bootstrap CSS &ndash;&gt;-->
+<!--    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css"-->
+<!--          integrity="sha384-/Y6pD6FV/Vv2HJnA6t+vslU6fwYXjCFtcEpHbNJ0lyAFsXTsjBbfaDjzALeQsN6M" crossorigin="anonymous">-->
+<!--    <title>Grader registration</title>-->
+<!--</head>-->
+<!--<body>-->
+<!--<div class="container mt-5">-->
+<!--    <h1>Grader registration</h1>-->
+<!--    <form method="POST" action="/user/create">-->
+<!--        <div class="form-group">-->
+<!--            <label for="login">Login</label>-->
+<!--            <input type="text" class="form-control" name="login" id="login" placeholder="Enter login" required>-->
+<!--        </div>-->
+<!--        <div class="form-group">-->
+<!--            <label for="name">Name</label>-->
+<!--            <input type="text" class="form-control" name="login" id="name" placeholder="Enter name" required>-->
+<!--        </div>-->
+<!--        <div class="form-group">-->
+<!--            <label for="password">Password</label>-->
+<!--            <input type="password" class="form-control" name="password" id="password" placeholder="Enter password"-->
+<!--                   required>-->
+<!--        </div>-->
+<!--        <div class="form-group">-->
+<!--            <label for="confirm_password">Confirm Password</label>-->
+<!--            <input type="password" class="form-control" name="confirm_password" id="confirm_password"-->
+<!--                   placeholder="Confirm password" required>-->
+<!--        </div>-->
+<!--        <button type="submit" class="btn btn-primary">Register</button>-->
+<!--    </form>-->
+<!--</div>-->
+<!--</body>-->
+<!--</html>-->

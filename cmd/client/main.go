@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	server "github.com/AGODOVALOV/grader/pkg/client"
+	"github.com/AGODOVALOV/grader/pkg/client/user/repo"
 	"github.com/AGODOVALOV/grader/pkg/config"
 	"github.com/AGODOVALOV/grader/pkg/logger"
 )
@@ -42,5 +43,18 @@ func main() {
 		map[string]string{
 			"url": net.JoinHostPort(appCfg.GetConfig().WebServer.Host, strconv.Itoa(appCfg.GetConfig().WebServer.Port)),
 		})
-	server.NewClientServer(ctx, appCfg.GetConfig().WebServer).ListenAndServe(ctx)
+
+	repoDB, err := repo.NewRepo(ctx, appCfg.GetConfig())
+	if err != nil {
+		z.Error(ctx, "DB connection", err.Error())
+		return
+	}
+
+	srv, err := server.NewClientServer(ctx, appCfg.GetConfig(), repoDB)
+	if err != nil {
+		z.Error(ctx, "create server", err.Error())
+		return
+	}
+
+	srv.ListenAndServe(ctx)
 }

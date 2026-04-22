@@ -14,12 +14,16 @@ web-server:
   idle-timeout: 60s
   shutdown-timeout: 5s
 
+token:
+  secret: 3z9KfP8vQwX2mLr7TnY5uB1sD4eH6jA0cVxRkUqWZpM=
+  duration: 40m
+
 postgres:
   host: localhost
   port: 5432
   user: postgres
   password: postgres
-  db_name: queue
+  db_name: grader
   ssl_mode: disable
   time_zone: UTC
   pool:
