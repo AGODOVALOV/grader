@@ -23,7 +23,13 @@ DELETE
 FROM users
 WHERE id = $1;
 
--- name: IsAdmin :one
+-- name: IsAdminByUseID :one
+SELECT admin
+FROM users
+WHERE ID = $1
+  AND admin = true;
+
+-- name: IsAdminByLogin :one
 SELECT admin
 FROM users
 WHERE login = $1
@@ -81,3 +87,18 @@ from users
          left join reviews on users.id = reviews.userid
          left join tasks on reviews.task = tasks.id
 where users.id = $1;
+
+-- name: GetReviewsAll :many
+select users.id,
+       users.login,
+       users.name,
+       tasks.id   as taskid,
+       tasks.name as taskname,
+       reviews.id as reviewid,
+       reviews.status,
+       reviews.created_at,
+       reviews.updated_at
+from users
+         left join reviews on users.id = reviews.userid
+         left join tasks on reviews.task = tasks.id
+where users.admin = false;

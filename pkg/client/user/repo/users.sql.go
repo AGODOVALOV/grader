@@ -14,7 +14,7 @@ import (
 const createReview = `-- name: CreateReview :one
 INSERT INTO reviews (userid, task, fileID)
 VALUES ($1, $2, $3)
-RETURNING id, userid, task, status, attempts, created_at, fileid
+RETURNING id, userid, task, status, attempts, created_at, fileid, updated_at
 `
 
 type CreateReviewParams struct {
@@ -34,6 +34,7 @@ func (q *Queries) CreateReview(ctx context.Context, arg CreateReviewParams) (Rev
 		&i.Attempts,
 		&i.CreatedAt,
 		&i.Fileid,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -81,7 +82,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
 }
 
 const getPendingReviews = `-- name: GetPendingReviews :many
-SELECT id, userid, task, status, attempts, created_at, fileid
+SELECT id, userid, task, status, attempts, created_at, fileid, updated_at
 FROM reviews
 WHERE status = 'pending'
 ORDER BY created_at ASC
@@ -104,6 +105,7 @@ func (q *Queries) GetPendingReviews(ctx context.Context) ([]Review, error) {
 			&i.Attempts,
 			&i.CreatedAt,
 			&i.Fileid,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -116,7 +118,7 @@ func (q *Queries) GetPendingReviews(ctx context.Context) ([]Review, error) {
 }
 
 const getReviewByID = `-- name: GetReviewByID :one
-SELECT id, userid, task, status, attempts, created_at, fileid
+SELECT id, userid, task, status, attempts, created_at, fileid, updated_at
 FROM reviews
 WHERE id = $1
 `
@@ -132,6 +134,7 @@ func (q *Queries) GetReviewByID(ctx context.Context, id int64) (Review, error) {
 		&i.Attempts,
 		&i.CreatedAt,
 		&i.Fileid,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -149,8 +152,66 @@ func (q *Queries) GetReviewfileID(ctx context.Context, id int64) (pgtype.Text, e
 	return fileid, err
 }
 
+const getReviewsAll = `-- name: GetReviewsAll :many
+select users.id,
+       users.login,
+       users.name,
+       tasks.id   as taskid,
+       tasks.name as taskname,
+       reviews.id as reviewid,
+       reviews.status,
+       reviews.created_at,
+       reviews.updated_at
+from users
+         left join reviews on users.id = reviews.userid
+         left join tasks on reviews.task = tasks.id
+where users.admin = false
+`
+
+type GetReviewsAllRow struct {
+	ID        int64
+	Login     string
+	Name      string
+	Taskid    pgtype.Int4
+	Taskname  pgtype.Text
+	Reviewid  pgtype.Int8
+	Status    NullReviewStatus
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+}
+
+func (q *Queries) GetReviewsAll(ctx context.Context) ([]GetReviewsAllRow, error) {
+	rows, err := q.db.Query(ctx, getReviewsAll)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetReviewsAllRow
+	for rows.Next() {
+		var i GetReviewsAllRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Login,
+			&i.Name,
+			&i.Taskid,
+			&i.Taskname,
+			&i.Reviewid,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getReviewsByTask = `-- name: GetReviewsByTask :many
-SELECT id, userid, task, status, attempts, created_at, fileid
+SELECT id, userid, task, status, attempts, created_at, fileid, updated_at
 FROM reviews
 WHERE task = $1
 ORDER BY created_at DESC
@@ -173,6 +234,7 @@ func (q *Queries) GetReviewsByTask(ctx context.Context, task int32) ([]Review, e
 			&i.Attempts,
 			&i.CreatedAt,
 			&i.Fileid,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -185,7 +247,7 @@ func (q *Queries) GetReviewsByTask(ctx context.Context, task int32) ([]Review, e
 }
 
 const getReviewsByUser = `-- name: GetReviewsByUser :many
-SELECT id, userid, task, status, attempts, created_at, fileid
+SELECT id, userid, task, status, attempts, created_at, fileid, updated_at
 FROM reviews
 WHERE userid = $1
 ORDER BY created_at DESC
@@ -208,6 +270,7 @@ func (q *Queries) GetReviewsByUser(ctx context.Context, userid pgtype.Int8) ([]R
 			&i.Attempts,
 			&i.CreatedAt,
 			&i.Fileid,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -324,15 +387,29 @@ func (q *Queries) GetUserByLogin(ctx context.Context, login string) (GetUserByLo
 	return i, err
 }
 
-const isAdmin = `-- name: IsAdmin :one
+const isAdminByLogin = `-- name: IsAdminByLogin :one
 SELECT admin
 FROM users
 WHERE login = $1
   AND admin = true
 `
 
-func (q *Queries) IsAdmin(ctx context.Context, login string) (bool, error) {
-	row := q.db.QueryRow(ctx, isAdmin, login)
+func (q *Queries) IsAdminByLogin(ctx context.Context, login string) (bool, error) {
+	row := q.db.QueryRow(ctx, isAdminByLogin, login)
+	var admin bool
+	err := row.Scan(&admin)
+	return admin, err
+}
+
+const isAdminByUseID = `-- name: IsAdminByUseID :one
+SELECT admin
+FROM users
+WHERE ID = $1
+  AND admin = true
+`
+
+func (q *Queries) IsAdminByUseID(ctx context.Context, id int64) (bool, error) {
+	row := q.db.QueryRow(ctx, isAdminByUseID, id)
 	var admin bool
 	err := row.Scan(&admin)
 	return admin, err

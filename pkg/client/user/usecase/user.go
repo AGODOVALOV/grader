@@ -59,8 +59,20 @@ func (s *UserService) CheckUserLogin(ctx context.Context, login string, password
 
 }
 
-func (s *UserService) CheckUserIsAdmin(ctx context.Context, login string) (bool, error) {
-	isAdmin, err := s.repo.Queries.IsAdmin(ctx, login)
+func (s *UserService) CheckUserIsAdminByLogin(ctx context.Context, login string) (bool, error) {
+	isAdmin, err := s.repo.Queries.IsAdminByLogin(ctx, login)
+	if err != nil {
+		if errors.Is(err, common.ErrRecordNotFound) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return isAdmin, nil
+}
+
+func (s *UserService) CheckUserIsAdminByUserID(ctx context.Context, id int64) (bool, error) {
+	isAdmin, err := s.repo.Queries.IsAdminByUseID(ctx, id)
 	if err != nil {
 		if errors.Is(err, common.ErrRecordNotFound) {
 			return false, nil
@@ -150,6 +162,36 @@ func (s *UserService) GetReviewsByUserID(ctx context.Context, userID int64) (*dt
 			Message:   msg, //fmt.Sprintf("message for task - %s", v.Taskname.String),
 			UpdatedAt: v.CreatedAt.Time.Format(time.RFC3339),
 		})
+	}
+
+	return &result, nil
+}
+
+func (s *UserService) GetReviews(ctx context.Context) (*dto.AdminReviewsPageData, error) {
+	data, err := s.repo.Queries.GetReviewsAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(data) == 0 {
+		return nil, common.ErrRecordNotFound
+	}
+
+	result := dto.AdminReviewsPageData{}
+
+	for _, v := range data {
+		result.Reviews = append(result.Reviews, dto.AdminReviewData{
+			ID:        v.ID,
+			UserLogin: v.Login,
+			FileName:  v.Name,
+			//:    int(v.Taskid.Int32),
+			TaskTitle: v.Taskname.String,
+			//:  v.Reviewid.Int64,
+			Status:    string(v.Status.ReviewStatus),
+			CreatedAt: v.CreatedAt.Time.Format(time.RFC3339),
+			UpdatedAt: v.UpdatedAt.Time.Format(time.RFC3339),
+		},
+		)
 	}
 
 	return &result, nil

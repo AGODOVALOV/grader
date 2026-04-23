@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css">
+    <title>Admin panel</title>
+</head>
+<body>
+<div class="container mt-5">
+    <h1>Admin panel</h1>
+
+    <table class="table table-striped mt-4">
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>User</th>
+            <th>Task</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th>Updated</th>
+            <th>Actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        {{range .Reviews}}
+        <tr>
+            <td>{{.ID}}</td>
+            <td>{{.UserLogin}}</td>
+            <td>{{.TaskTitle}}</td>
+            <td>{{.Status}}</td>
+            <td>{{.CreatedAt}}</td>
+            <td>{{.UpdatedAt}}</td>
+            <td>
+                <form method="POST" action="/admin/review/{{.ID}}/status" class="form-inline">
+                    <select name="status" class="form-control form-control-sm mr-2">
+                        <option value="pending">pending</option>
+                        <option value="processing">processing</option>
+                        <option value="failed">failed</option>
+                        <option value="done">done</option>
+                    </select>
+                    <button type="submit" class="btn btn-sm btn-primary">Update</button>
+                </form>
+            </td>
+        </tr>
+        {{end}}
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

@@ -63,6 +63,7 @@ type Review struct {
 	Attempts  pgtype.Int4
 	CreatedAt pgtype.Timestamptz
 	Fileid    pgtype.Text
+	UpdatedAt pgtype.Timestamptz
 }
 
 type Task struct {
