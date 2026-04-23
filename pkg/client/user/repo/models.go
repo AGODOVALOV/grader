@@ -5,8 +5,70 @@
 package repo
 
 import (
+	"database/sql/driver"
+	"fmt"
+
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+type ReviewStatus string
+
+const (
+	ReviewStatusPending    ReviewStatus = "pending"
+	ReviewStatusProcessing ReviewStatus = "processing"
+	ReviewStatusFailed     ReviewStatus = "failed"
+	ReviewStatusDone       ReviewStatus = "done"
+)
+
+func (e *ReviewStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ReviewStatus(s)
+	case string:
+		*e = ReviewStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ReviewStatus: %T", src)
+	}
+	return nil
+}
+
+type NullReviewStatus struct {
+	ReviewStatus ReviewStatus
+	Valid        bool // Valid is true if ReviewStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullReviewStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.ReviewStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ReviewStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullReviewStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ReviewStatus), nil
+}
+
+type Review struct {
+	ID        int64
+	Userid    pgtype.Int8
+	Task      int32
+	Status    NullReviewStatus
+	Attempts  pgtype.Int4
+	CreatedAt pgtype.Timestamptz
+	Fileid    pgtype.Text
+}
+
+type Task struct {
+	ID   int32
+	Name pgtype.Text
+}
 
 type User struct {
 	ID        int64

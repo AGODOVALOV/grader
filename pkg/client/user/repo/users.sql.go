@@ -7,11 +7,41 @@ package repo
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
+
+const createReview = `-- name: CreateReview :one
+INSERT INTO reviews (userid, task, fileID)
+VALUES ($1, $2, $3)
+RETURNING id, userid, task, status, attempts, created_at, fileid
+`
+
+type CreateReviewParams struct {
+	Userid pgtype.Int8
+	Task   int32
+	Fileid pgtype.Text
+}
+
+func (q *Queries) CreateReview(ctx context.Context, arg CreateReviewParams) (Review, error) {
+	row := q.db.QueryRow(ctx, createReview, arg.Userid, arg.Task, arg.Fileid)
+	var i Review
+	err := row.Scan(
+		&i.ID,
+		&i.Userid,
+		&i.Task,
+		&i.Status,
+		&i.Attempts,
+		&i.CreatedAt,
+		&i.Fileid,
+	)
+	return i, err
+}
 
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (login, name, password)
-VALUES ($1, $2, $3) RETURNING id, login, name, password
+VALUES ($1, $2, $3)
+RETURNING id, login, name, password
 `
 
 type CreateUserParams struct {
@@ -48,6 +78,200 @@ WHERE id = $1
 func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
 	_, err := q.db.Exec(ctx, deleteUser, id)
 	return err
+}
+
+const getPendingReviews = `-- name: GetPendingReviews :many
+SELECT id, userid, task, status, attempts, created_at, fileid
+FROM reviews
+WHERE status = 'pending'
+ORDER BY created_at ASC
+`
+
+func (q *Queries) GetPendingReviews(ctx context.Context) ([]Review, error) {
+	rows, err := q.db.Query(ctx, getPendingReviews)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Review
+	for rows.Next() {
+		var i Review
+		if err := rows.Scan(
+			&i.ID,
+			&i.Userid,
+			&i.Task,
+			&i.Status,
+			&i.Attempts,
+			&i.CreatedAt,
+			&i.Fileid,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getReviewByID = `-- name: GetReviewByID :one
+SELECT id, userid, task, status, attempts, created_at, fileid
+FROM reviews
+WHERE id = $1
+`
+
+func (q *Queries) GetReviewByID(ctx context.Context, id int64) (Review, error) {
+	row := q.db.QueryRow(ctx, getReviewByID, id)
+	var i Review
+	err := row.Scan(
+		&i.ID,
+		&i.Userid,
+		&i.Task,
+		&i.Status,
+		&i.Attempts,
+		&i.CreatedAt,
+		&i.Fileid,
+	)
+	return i, err
+}
+
+const getReviewfileID = `-- name: GetReviewfileID :one
+SELECT fileID
+FROM reviews
+WHERE id = $1
+`
+
+func (q *Queries) GetReviewfileID(ctx context.Context, id int64) (pgtype.Text, error) {
+	row := q.db.QueryRow(ctx, getReviewfileID, id)
+	var fileid pgtype.Text
+	err := row.Scan(&fileid)
+	return fileid, err
+}
+
+const getReviewsByTask = `-- name: GetReviewsByTask :many
+SELECT id, userid, task, status, attempts, created_at, fileid
+FROM reviews
+WHERE task = $1
+ORDER BY created_at DESC
+`
+
+func (q *Queries) GetReviewsByTask(ctx context.Context, task int32) ([]Review, error) {
+	rows, err := q.db.Query(ctx, getReviewsByTask, task)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Review
+	for rows.Next() {
+		var i Review
+		if err := rows.Scan(
+			&i.ID,
+			&i.Userid,
+			&i.Task,
+			&i.Status,
+			&i.Attempts,
+			&i.CreatedAt,
+			&i.Fileid,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getReviewsByUser = `-- name: GetReviewsByUser :many
+SELECT id, userid, task, status, attempts, created_at, fileid
+FROM reviews
+WHERE userid = $1
+ORDER BY created_at DESC
+`
+
+func (q *Queries) GetReviewsByUser(ctx context.Context, userid pgtype.Int8) ([]Review, error) {
+	rows, err := q.db.Query(ctx, getReviewsByUser, userid)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Review
+	for rows.Next() {
+		var i Review
+		if err := rows.Scan(
+			&i.ID,
+			&i.Userid,
+			&i.Task,
+			&i.Status,
+			&i.Attempts,
+			&i.CreatedAt,
+			&i.Fileid,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getReviewsByUserID = `-- name: GetReviewsByUserID :many
+select users.id,
+       users.login,
+       users.name,
+       tasks.id   as taskid,
+       tasks.name as taskname,
+       reviews.id as reviewid,
+       reviews.status,
+       reviews.created_at
+from users
+         left join reviews on users.id = reviews.userid
+         left join tasks on reviews.task = tasks.id
+where users.id = $1
+`
+
+type GetReviewsByUserIDRow struct {
+	ID        int64
+	Login     string
+	Name      string
+	Taskid    pgtype.Int4
+	Taskname  pgtype.Text
+	Reviewid  pgtype.Int8
+	Status    NullReviewStatus
+	CreatedAt pgtype.Timestamptz
+}
+
+func (q *Queries) GetReviewsByUserID(ctx context.Context, id int64) ([]GetReviewsByUserIDRow, error) {
+	rows, err := q.db.Query(ctx, getReviewsByUserID, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetReviewsByUserIDRow
+	for rows.Next() {
+		var i GetReviewsByUserIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Login,
+			&i.Name,
+			&i.Taskid,
+			&i.Taskname,
+			&i.Reviewid,
+			&i.Status,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getUserByID = `-- name: GetUserByID :one
@@ -150,4 +374,21 @@ func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateReviewStatus = `-- name: UpdateReviewStatus :exec
+UPDATE reviews
+SET status   = $2,
+    attempts = attempts + 1
+WHERE id = $1
+`
+
+type UpdateReviewStatusParams struct {
+	ID     int64
+	Status NullReviewStatus
+}
+
+func (q *Queries) UpdateReviewStatus(ctx context.Context, arg UpdateReviewStatusParams) error {
+	_, err := q.db.Exec(ctx, updateReviewStatus, arg.ID, arg.Status)
+	return err
 }

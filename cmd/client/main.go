@@ -11,6 +11,7 @@ import (
 	"github.com/AGODOVALOV/grader/pkg/client/user/repo"
 	"github.com/AGODOVALOV/grader/pkg/config"
 	"github.com/AGODOVALOV/grader/pkg/logger"
+	"github.com/AGODOVALOV/grader/pkg/storage/s3"
 )
 
 // main initializes the application by loading configuration, setting up the logger, and starting the client server.
@@ -44,13 +45,23 @@ func main() {
 			"url": net.JoinHostPort(appCfg.GetConfig().WebServer.Host, strconv.Itoa(appCfg.GetConfig().WebServer.Port)),
 		})
 
+	// init db
 	repoDB, err := repo.NewRepo(ctx, appCfg.GetConfig())
 	if err != nil {
 		z.Error(ctx, "DB connection", err.Error())
 		return
 	}
 
-	srv, err := server.NewClientServer(ctx, appCfg.GetConfig(), repoDB)
+	// init file storage
+	fStorage, err := s3.NewFileStorage(ctx, appCfg.GetConfig().FileStorage)
+	if err != nil {
+		z.Error(ctx, "init file storage", err.Error())
+		return
+	}
+
+	_ = fStorage
+
+	srv, err := server.NewClientServer(ctx, appCfg.GetConfig(), repoDB, fStorage)
 	if err != nil {
 		z.Error(ctx, "create server", err.Error())
 		return

@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/AGODOVALOV/grader/pkg/config/config"
-	"github.com/AGODOVALOV/grader/pkg/infra/db"
+	"github.com/AGODOVALOV/grader/pkg/storage/db"
 )
 
 type Repo struct {

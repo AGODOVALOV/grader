@@ -25,7 +25,7 @@
                 <div class="card-body">
                     <h5 class="card-title">User information</h5>
                     <p class="card-text mb-1"><strong>Login:</strong> {{.Login}}</p>
-                    <p class="card-text mb-1"><strong>Email:</strong> {{.Email}}</p>
+                    <p class="card-text mb-1"><strong>Name:</strong> {{.Name}}</p>
                 </div>
             </div>
         </div>
@@ -33,7 +33,7 @@
 
     <div class="row">
         <div class="col">
-            <form method="POST" action="/tasks/send-review" class="mt-3">
+            <form method="POST" action="/task/review" class="mt-3" enctype="multipart/form-data">
                 <input type="hidden" name="userID" value="{{.Login}}">
                 <div class="form-group">
                     <label for="taskNumber">Task number</label>

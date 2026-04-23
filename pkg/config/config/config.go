@@ -3,8 +3,9 @@ package config
 
 import (
 	client "github.com/AGODOVALOV/grader/pkg/client/config"
-	dbconfig "github.com/AGODOVALOV/grader/pkg/infra/db/postgres/config"
 	loggerconfig "github.com/AGODOVALOV/grader/pkg/logger/config"
+	dbconfig "github.com/AGODOVALOV/grader/pkg/storage/db/postgres/config"
+	filestorageconfig "github.com/AGODOVALOV/grader/pkg/storage/s3/s3_minio/config"
 	tokenconfig "github.com/AGODOVALOV/grader/pkg/token/config"
 )
 
@@ -19,6 +20,8 @@ type Config struct {
 	WebServer client.Config `mapstructure:"web-server" validate:"required"`
 
 	DB dbconfig.Config `mapstructure:"postgres" validate:"required"`
+
+	FileStorage filestorageconfig.Config `mapstructure:"s3-minio" validate:"required"`
 
 	Token tokenconfig.Config `mapstructure:"token" validate:"required"`
 }

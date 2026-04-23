@@ -1,8 +1,8 @@
 version: "2"
 sql:
   - engine: "postgresql"
-    schema: "pkg/infra/db/postgres/sqlc/migrations/"
-    queries: "pkg/infra/db/postgres/sqlc/queries/"
+    schema: "pkg/storage/db/postgres/sqlc/migrations/"
+    queries: "pkg/storage/db/postgres/sqlc/queries/"
     gen:
       go:
         package: "repo"

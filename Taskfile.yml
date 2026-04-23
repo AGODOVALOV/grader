@@ -58,7 +58,7 @@ tasks:
       - '{{.GOLANGCI_LINT}} run ./... --config=golangci.yml'
 
   docker-up:
-    desc: "Starts all docker-compose.yml files from ./infra"
+    desc: "Starts all docker-compose.yml files from ./storage"
     cmds:
       - |
         find ./infra -type f -name '*docker-compose*.yml' | while read f; do
@@ -67,7 +67,7 @@ tasks:
         done
 
   docker-down:
-    desc: "Stops all docker-compose.yml files from ./infra"
+    desc: "Stops all docker-compose.yml files from ./storage"
     cmds:
       - |
         find ./infra -type f -name '*docker-compose*.yml' | while read f; do

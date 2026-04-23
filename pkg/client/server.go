@@ -16,6 +16,7 @@ import (
 	"github.com/AGODOVALOV/grader/pkg/client/user/usecase"
 	"github.com/AGODOVALOV/grader/pkg/config/config"
 	"github.com/AGODOVALOV/grader/pkg/logger"
+	"github.com/AGODOVALOV/grader/pkg/storage/s3"
 	"github.com/AGODOVALOV/grader/pkg/token"
 	"github.com/swaggo/http-swagger"
 )
@@ -31,7 +32,7 @@ type Server struct {
 }
 
 // NewClientServer creates a new HTTP server.
-func NewClientServer(ctx context.Context, cfg *config.Config, repo *repo.Repo) (*Server, error) {
+func NewClientServer(ctx context.Context, cfg *config.Config, repo *repo.Repo, fStorage *s3.FileStorage) (*Server, error) {
 	tmpl := template.Must(template.ParseFS(templateFS, "html/templates/*.html"))
 
 	tokenMaker, err := token.NewJWTMaker(&cfg.Token)
@@ -39,7 +40,7 @@ func NewClientServer(ctx context.Context, cfg *config.Config, repo *repo.Repo) (
 		return nil, err
 	}
 
-	usr := user.NewUser(tmpl, usecase.NewUserService(repo, tokenMaker))
+	usr := user.NewUser(tmpl, usecase.NewUserService(repo, fStorage, tokenMaker))
 
 	// configure router
 	r := configureRouter(usr)
@@ -80,6 +81,8 @@ func configureRouter(u *user.User) *http.ServeMux {
 
 	router.HandleFunc("POST /user/create", u.Handler.CreateUser)
 	router.HandleFunc("POST /user/login", u.Handler.LoginUser)
+
+	router.HandleFunc("POST /task/review", u.Handler.UploadTask)
 
 	router.Handle("/swagger/", httpSwagger.WrapHandler)
 

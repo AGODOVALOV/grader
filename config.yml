@@ -31,3 +31,10 @@ postgres:
     max_idle_conns: 10
     conn_max_lifetime: 1h
     conn_max_idle_time: 30m
+
+s3-minio:
+  endpoint: localhost:9000
+  access_key: minioadmin
+  secret_key: minioadmin
+  bucket: grader
+  use_ssl: false
