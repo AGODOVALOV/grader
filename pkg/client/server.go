@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"strconv"
 
-	_ "github.com/AGODOVALOV/grader/docs/swagger"
+	_ "github.com/AGODOVALOV/grader/docs/swagger" // required to register generated Swagger docs via init()
 	"github.com/AGODOVALOV/grader/pkg/client/middleware"
 	"github.com/AGODOVALOV/grader/pkg/client/user"
 	"github.com/AGODOVALOV/grader/pkg/client/user/repo"
@@ -32,7 +32,7 @@ type Server struct {
 }
 
 // NewClientServer creates a new HTTP server.
-func NewClientServer(ctx context.Context, cfg *config.Config, repo *repo.Repo, fStorage *s3.FileStorage) (*Server, error) {
+func NewClientServer(ctx context.Context, cfg *config.Config, r *repo.Repo, fStorage *s3.FileStorage) (*Server, error) {
 	tmpl := template.Must(template.ParseFS(templateFS, "html/templates/*.html"))
 
 	tokenMaker, err := token.NewJWTMaker(&cfg.Token)
@@ -40,13 +40,13 @@ func NewClientServer(ctx context.Context, cfg *config.Config, repo *repo.Repo, f
 		return nil, err
 	}
 
-	usr := user.NewUser(tmpl, usecase.NewUserService(repo, fStorage, tokenMaker))
+	usr := user.NewUser(tmpl, usecase.NewUserService(r, fStorage, tokenMaker))
 
 	// configure router
-	r := configureRouter(usr)
+	router := configureRouter(usr)
 
 	// add middleware
-	handlerMux := middleware.AccessLogWithCtx(ctx, r)
+	handlerMux := middleware.AccessLogWithCtx(ctx, router)
 	handlerMux = middleware.Auth(tokenMaker, handlerMux)
 
 	srv := &http.Server{

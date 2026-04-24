@@ -1,26 +1,39 @@
+// Package postgres provides PostgreSQL database connection.
 package postgres
 
 import (
 	"context"
 	"fmt"
+	"net/url"
 
 	"github.com/AGODOVALOV/grader/pkg/logger"
-	"github.com/jackc/pgx/v5/pgxpool"
-	_ "github.com/jackc/pgx/v5/stdlib"
-
 	"github.com/AGODOVALOV/grader/pkg/storage/db/postgres/config"
+	"github.com/jackc/pgx/v5/pgxpool"
+	_ "github.com/jackc/pgx/v5/stdlib" // #nosec G104
 )
 
+// NewPostgresDB creates a new PostgreSQL database connection pool.
 func NewPostgresDB(ctx context.Context, cfg *config.Config) (*pgxpool.Pool, error) {
-	dsn := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s&timezone=%s",
-		cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.DBName, cfg.SSLMode, cfg.TimeZone)
+	u := &url.URL{
+		Scheme: "postgres",
+		User:   url.UserPassword(cfg.User, cfg.Password),
+		Host:   fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
+		Path:   cfg.DBName,
+	}
+
+	q := u.Query()
+	q.Set("sslmode", cfg.SSLMode)
+	q.Set("TimeZone", cfg.TimeZone)
+	u.RawQuery = q.Encode()
+
+	dsn := u.String()
 
 	poolConfig, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
 		return nil, err
 	}
-	poolConfig.MaxConns = int32(cfg.Pool.MaxOpenConns)
-	poolConfig.MinConns = int32(cfg.Pool.MaxIdleConns)
+	poolConfig.MaxConns = int32(cfg.Pool.MaxOpenConns) // #nosec G115
+	poolConfig.MinConns = int32(cfg.Pool.MaxIdleConns) // #nosec G115
 	poolConfig.MaxConnLifetime = cfg.Pool.ConnMaxLifetime
 	poolConfig.MaxConnIdleTime = cfg.Pool.ConnMaxIdleTime
 	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
@@ -28,7 +41,8 @@ func NewPostgresDB(ctx context.Context, cfg *config.Config) (*pgxpool.Pool, erro
 		return nil, err
 	}
 
-	if err := pool.Ping(ctx); err != nil {
+	err = pool.Ping(ctx)
+	if err != nil {
 		logger.Z(ctx).Error(ctx, "create Postgres connection", err.Error(), map[string]string{
 			"host":    cfg.Host,
 			"port":    fmt.Sprintf("%d", cfg.Port),

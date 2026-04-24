@@ -5,7 +5,7 @@ import (
 	client "github.com/AGODOVALOV/grader/pkg/client/config"
 	loggerconfig "github.com/AGODOVALOV/grader/pkg/logger/config"
 	dbconfig "github.com/AGODOVALOV/grader/pkg/storage/db/postgres/config"
-	filestorageconfig "github.com/AGODOVALOV/grader/pkg/storage/s3/s3_minio/config"
+	filestorageconfig "github.com/AGODOVALOV/grader/pkg/storage/s3/s3minio/config"
 	tokenconfig "github.com/AGODOVALOV/grader/pkg/token/config"
 )
 

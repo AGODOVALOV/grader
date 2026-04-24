@@ -1,3 +1,4 @@
+// Package dto contains data transfer objects for user panel and admin panel.
 package dto
 
 // TaskData represents one task row for the user panel.

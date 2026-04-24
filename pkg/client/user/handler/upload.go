@@ -22,7 +22,7 @@ import (
 // @Failure 400 {string} string "Bad request"
 // @Failure 401 {string} string "Unauthorized"
 // @Failure 500 {string} string "Internal server error"
-// @Router /task/review [post]
+// @Router /task/review [post].
 func (h *UserHandler) UploadTask(w http.ResponseWriter, r *http.Request) {
 	currSession, ok := r.Context().Value(session.SessionKey).(session.Session)
 	if !ok {
@@ -45,7 +45,7 @@ func (h *UserHandler) UploadTask(w http.ResponseWriter, r *http.Request) {
 		}
 	}(file)
 
-	taskNum, err := strconv.Atoi(taskNumStr)
+	taskNum, err := strconv.ParseInt(taskNumStr, 10, 32)
 	if err != nil {
 		logger.Z(r.Context()).Error(r.Context(), "upload file", err.Error())
 		http.Error(w, "request error", http.StatusBadRequest)
@@ -57,11 +57,10 @@ func (h *UserHandler) UploadTask(w http.ResponseWriter, r *http.Request) {
 	_, err = h.Service.CreateNewReview(
 		r.Context(),
 		currSession.UserID,
-		taskNum,
+		int32(taskNum),
 		objectName,
 		file,
 		header.Size)
-
 	if err != nil {
 		logger.Z(r.Context()).Error(r.Context(), "upload file", err.Error())
 		return

@@ -4,9 +4,8 @@ package loader
 import (
 	"fmt"
 
-	"github.com/spf13/viper"
-
 	"github.com/AGODOVALOV/grader/pkg/config/config"
+	"github.com/spf13/viper"
 )
 
 // ConfigLoader is responsible for loading and unmarshalling configuration files into a structured configuration object.

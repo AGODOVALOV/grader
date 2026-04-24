@@ -1,3 +1,4 @@
+// Package repo provides user repository.
 package repo
 
 import (
@@ -7,14 +8,15 @@ import (
 	"github.com/AGODOVALOV/grader/pkg/storage/db"
 )
 
+// Repo is a user repository.
 type Repo struct {
 	Queries *Queries
 	db      *db.RepoDB
 }
 
+// NewRepo creates a new user repository.
 func NewRepo(ctx context.Context, cfg *config.Config) (*Repo, error) {
 	repoDB, err := db.NewRepoDB(ctx, cfg)
-
 	if err != nil {
 		return nil, err
 	}
@@ -23,5 +25,4 @@ func NewRepo(ctx context.Context, cfg *config.Config) (*Repo, error) {
 		Queries: New(repoDB.Pool),
 		db:      repoDB,
 	}, nil
-
 }

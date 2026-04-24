@@ -25,15 +25,15 @@ func AccessLogWithCtx(ctx context.Context, next http.Handler) http.Handler {
 	})
 }
 
-var (
-	noAuthUrls = map[string]struct{}{
-		"/user/login":    struct{}{},
-		"/user/register": struct{}{},
-		"/user/create":   struct{}{},
-		"/swagger":       struct{}{},
-	}
-)
+//nolint:gochecknoglobals // static whitelist for auth middleware
+var noAuthUrls = map[string]struct{}{
+	"/user/login":    {},
+	"/user/register": {},
+	"/user/create":   {},
+	"/swagger":       {},
+}
 
+// Auth middleware.
 func Auth(tokenMaker token.Maker, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if _, ok := noAuthUrls[r.URL.Path]; ok {

@@ -1,3 +1,4 @@
+// Package db provides database functionality.
 package db
 
 import (
@@ -8,10 +9,12 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// RepoDB is a database connection pool.
 type RepoDB struct {
 	Pool *pgxpool.Pool
 }
 
+// NewRepoDB creates a new database connection pool.
 func NewRepoDB(ctx context.Context, cfg *config.Config) (*RepoDB, error) {
 	db, err := postgres.NewPostgresDB(ctx, &cfg.DB)
 	if err != nil {

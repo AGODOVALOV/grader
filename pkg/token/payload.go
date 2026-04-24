@@ -9,18 +9,21 @@ import (
 )
 
 var (
+	// ErrExpiredToken is returned when the token is expired.
 	ErrExpiredToken = errors.New("token has invalid claims: token is expired")
+	// ErrInvalidToken is returned when the token is invalid.
 	ErrInvalidToken = errors.New("token is invalid")
 )
 
-// Payload contains the payload data ot the token
+// Payload contains the payload data ot the token.
 type Payload struct {
+	jwt.RegisteredClaims
+
 	ID        uuid.UUID `json:"id"`
 	UserID    int64     `json:"user_id"`
 	Username  string    `json:"username"`
 	IssuedAt  time.Time `json:"issued_at"`
 	ExpiredAt time.Time `json:"expired_at"`
-	jwt.RegisteredClaims
 }
 
 // NewPayload creates a new token payload with a specific username and duration.
@@ -54,6 +57,7 @@ func NewPayload(userID int64, username string, duration time.Duration) (*Payload
 	return payload, nil
 }
 
+// Valid checks if the token is valid.
 func (payload *Payload) Valid() error {
 	if time.Now().After(payload.ExpiredAt) {
 		return ErrExpiredToken

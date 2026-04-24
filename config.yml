@@ -23,18 +23,18 @@ postgres:
   port: 5432
   user: postgres
   password: postgres
-  db_name: grader
-  ssl_mode: disable
-  time_zone: UTC
+  db-name: grader
+  ssl-mode: disable
+  time-zone: UTC
   pool:
-    max_open_conns: 25
-    max_idle_conns: 10
-    conn_max_lifetime: 1h
-    conn_max_idle_time: 30m
+    max-open-conns: 25
+    max-idle-conns: 10
+    conn-max-lifetime: 1h
+    conn-max-idletime: 30m
 
 s3-minio:
   endpoint: localhost:9000
-  access_key: minioadmin
-  secret_key: minioadmin
+  access-key: minioadmin
+  secret-key: minioadmin
   bucket: grader
-  use_ssl: false
+  use-ssl: false

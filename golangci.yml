@@ -373,7 +373,7 @@ linters:
       - docs/swagger
 formatters:
   enable:
-    - gci
+#    - gci
     - gofmt
     - gofumpt
     - goimports

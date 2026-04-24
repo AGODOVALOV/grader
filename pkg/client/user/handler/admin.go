@@ -8,21 +8,6 @@ import (
 	"github.com/AGODOVALOV/grader/pkg/logger"
 )
 
-type AdminReviewData struct {
-	ID        int64
-	UserLogin string
-	TaskTitle string
-	Status    string
-	Message   string
-	FileName  string
-	CreatedAt string
-	UpdatedAt string
-}
-
-type AdminPageData struct {
-	Reviews []AdminReviewData
-}
-
 // Admin godoc
 // @Summary Admin panel page
 // @Description Renders the admin panel with all user reviews
@@ -32,7 +17,7 @@ type AdminPageData struct {
 // @Success 200 {string} string "HTML page"
 // @Failure 401 {string} string "Unauthorized"
 // @Failure 500 {string} string "Internal server error"
-// @Router /admin [get]
+// @Router /admin [get].
 func (h *UserHandler) Admin(w http.ResponseWriter, r *http.Request) {
 	currSession, ok := r.Context().Value(session.SessionKey).(session.Session)
 	if !ok {
@@ -71,7 +56,7 @@ func (h *UserHandler) Admin(w http.ResponseWriter, r *http.Request) {
 // @Failure 400 {string} string "Bad request"
 // @Failure 401 {string} string "Unauthorized"
 // @Failure 500 {string} string "Internal server error"
-// @Router /admin/review/update [post]
+// @Router /admin/review/update [post].
 func (h *UserHandler) UpdateReviewAdmin(w http.ResponseWriter, r *http.Request) {
 	currSession, ok := r.Context().Value(session.SessionKey).(session.Session)
 	if !ok {

@@ -4,10 +4,9 @@ package watcher
 import (
 	"context"
 
+	"github.com/AGODOVALOV/grader/pkg/logger"
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
-
-	"github.com/AGODOVALOV/grader/pkg/logger"
 )
 
 // Watcher provides functionality to monitor configuration file changes and trigger reloading of the configuration.

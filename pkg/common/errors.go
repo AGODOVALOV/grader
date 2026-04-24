@@ -1,11 +1,14 @@
-package common
+// Package common contains common error types.
+package common //nolint:revive // package name is ok
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/jackc/pgx/v5"
 )
 
+// ErrRecordNotFound is returned when a record is not found.
 var ErrRecordNotFound = pgx.ErrNoRows
 
-var ErrIncorrectPassword = fmt.Errorf("incorrect password")
+// ErrIncorrectPassword is returned when the password is incorrect.
+var ErrIncorrectPassword = errors.New("incorrect password")

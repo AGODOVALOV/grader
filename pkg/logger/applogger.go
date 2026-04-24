@@ -7,11 +7,10 @@ import (
 	"strconv"
 	"sync"
 
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-
 	"github.com/AGODOVALOV/grader/pkg/logger/config"
 	zaplogger "github.com/AGODOVALOV/grader/pkg/logger/zap"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 type contextKeyLogger string
@@ -92,10 +91,7 @@ func (z AppLogger) Debug(ctx context.Context, action, message string, extraField
 	}
 
 	defer func(logger *zap.Logger) {
-		err := logger.Sync()
-		if err != nil {
-			//fmt.Println(err)
-		}
+		_ = logger.Sync()
 	}(z.logger)
 	fields := z.getExtraFields(ctx, ef)
 
@@ -111,10 +107,7 @@ func (z AppLogger) Info(ctx context.Context, action, message string, extraFields
 	}
 
 	defer func(logger *zap.Logger) {
-		err := logger.Sync()
-		if err != nil {
-			//fmt.Println(err)
-		}
+		_ = logger.Sync()
 	}(z.logger)
 	fields := z.getExtraFields(ctx, ef)
 
@@ -130,10 +123,7 @@ func (z AppLogger) Warn(ctx context.Context, action, message string, extraFields
 	}
 
 	defer func(logger *zap.Logger) {
-		err := logger.Sync()
-		if err != nil {
-			//fmt.Println(err)
-		}
+		_ = logger.Sync()
 	}(z.logger)
 	fields := z.getExtraFields(ctx, ef)
 
@@ -149,13 +139,9 @@ func (z AppLogger) Error(ctx context.Context, action, message string, extraField
 	}
 
 	defer func(logger *zap.Logger) {
-		err := logger.Sync()
-		if err != nil {
-			//fmt.Println(err)
-		}
+		_ = logger.Sync()
 	}(z.logger)
 	fields := z.getExtraFields(ctx, ef)
-
 	z.logger.Error(getMessage(ctx, action, message), fields...)
 }
 
@@ -168,10 +154,7 @@ func (z AppLogger) Fatal(ctx context.Context, action, message string, extraField
 	}
 
 	defer func(logger *zap.Logger) {
-		err := logger.Sync()
-		if err != nil {
-			//fmt.Println(err)
-		}
+		_ = logger.Sync()
 	}(z.logger)
 	fields := z.getExtraFields(ctx, ef)
 
