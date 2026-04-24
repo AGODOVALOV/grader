@@ -25,15 +25,19 @@ type ErrorResponseCreateUser struct {
 }
 
 // CreateUser godoc
-// @Summary User login create
-// @Description CreateUser with username and password
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param request body CreateUserRequest true "login request"
-// @Success 200 {object} UserResponse
-// @Failure 400 {object} ErrorResponseCreateUser
-// @Router /user/create [post].
+// @Summary Register a new user
+// @Description Creates a new user account from submitted form data
+// @Tags user
+// @Accept application/x-www-form-urlencoded
+// @Produce html
+// @Param login formData string true "Login"
+// @Param name formData string true "Name"
+// @Param password formData string true "Password"
+// @Param confirm_password formData string true "Confirm password"
+// @Success 200
+// @Failure 400
+// @Failure 500
+// @Router /user/create [post]
 func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 
 	login := r.FormValue("login")

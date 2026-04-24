@@ -76,7 +76,10 @@ func (s *Server) ListenAndServe(ctx context.Context) {
 func configureRouter(u *user.User) *http.ServeMux {
 	router := http.NewServeMux()
 	router.HandleFunc("GET /user/login", u.Handler.Login)
+
 	router.HandleFunc("GET /admin", u.Handler.Admin)
+	router.HandleFunc("POST /admin/review/update", u.Handler.UpdateReviewAdmin)
+
 	router.HandleFunc("GET /user/register", u.Handler.Register)
 	router.HandleFunc("GET /user/account/{userID}", u.Handler.Account)
 

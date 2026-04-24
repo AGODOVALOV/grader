@@ -196,3 +196,13 @@ func (s *UserService) GetReviews(ctx context.Context) (*dto.AdminReviewsPageData
 
 	return &result, nil
 }
+
+func (s *UserService) UpdateReviewStatus(ctx context.Context, id int64, status string) error {
+	return s.repo.Queries.UpdateReviewStatusByID(ctx, repo.UpdateReviewStatusByIDParams{
+		Status: repo.NullReviewStatus{
+			ReviewStatus: repo.ReviewStatus(status),
+			Valid:        true,
+		},
+		ID: id,
+	})
+}

@@ -1,105 +1,254 @@
-definitions:
-  handler.CreateUserRequest:
-    properties:
-      confirm_password:
-        type: string
-      login:
-        type: string
-      name:
-        type: string
-      password:
-        type: string
-    type: object
-  handler.CreateUserResponse:
-    properties:
-      id:
-        type: integer
-    type: object
-  handler.ErrorResponse:
-    properties:
-      message:
-        type: string
-    type: object
-  handler.ErrorResponseCreateUser:
-    properties:
-      message:
-        type: string
-    type: object
-  handler.LoginRequest:
-    properties:
-      login:
-        type: string
-      password:
-        type: string
-    type: object
-  handler.LoginResponse:
-    properties:
-      token:
-        type: string
-    type: object
 info:
   contact: {}
 paths:
+  /admin:
+    get:
+      consumes:
+      - text/html
+      description: Renders the admin panel with all user reviews
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML page
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Admin panel page
+      tags:
+      - admin
+  /admin/review/update:
+    post:
+      consumes:
+      - application/x-www-form-urlencoded
+      description: Updates review status from the admin panel and refreshes the page
+      parameters:
+      - description: Review ID
+        in: formData
+        name: reviewID
+        required: true
+        type: integer
+      - description: New review status
+        in: formData
+        name: status
+        required: true
+        type: string
+      produces:
+      - text/html
+      responses:
+        "303":
+          description: See Other
+          schema:
+            type: string
+        "400":
+          description: Bad request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Update review status
+      tags:
+      - admin
+  /task/review:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Uploads a file for a selected task and creates a new review request
+      parameters:
+      - description: Task number
+        in: formData
+        name: taskNumber
+        required: true
+        type: integer
+      - description: Source file
+        in: formData
+        name: taskFile
+        required: true
+        type: file
+      produces:
+      - text/html
+      responses:
+        "303":
+          description: See Other
+          schema:
+            type: string
+        "400":
+          description: Bad request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Submit a task for review
+      tags:
+      - task
+  /user/account/{userID}:
+    get:
+      consumes:
+      - text/html
+      description: Renders the personal account page for the authenticated user
+      parameters:
+      - description: User ID
+        in: path
+        name: userID
+        required: true
+        type: integer
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML page
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "404":
+          description: Not found
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: User account page
+      tags:
+      - user
   /user/create:
     post:
       consumes:
-      - application/json
-      description: CreateUser with username and password
+      - application/x-www-form-urlencoded
+      description: Creates a new user account from submitted form data
       parameters:
-      - description: login request
-        in: body
-        name: request
+      - description: Login
+        in: formData
+        name: login
         required: true
-        schema:
-          $ref: '#/definitions/handler.CreateUserRequest'
+        type: string
+      - description: Name
+        in: formData
+        name: name
+        required: true
+        type: string
+      - description: Password
+        in: formData
+        name: password
+        required: true
+        type: string
+      - description: Confirm password
+        in: formData
+        name: confirm_password
+        required: true
+        type: string
       produces:
-      - application/json
+      - text/html
       responses:
         "200":
           description: OK
-          schema:
-            $ref: '#/definitions/handler.CreateUserResponse'
         "400":
           description: Bad Request
-          schema:
-            $ref: '#/definitions/handler.ErrorResponseCreateUser'
-      summary: User login create
+        "500":
+          description: Internal Server Error
+      summary: Register a new user
       tags:
-      - auth
+      - user
   /user/login:
     get:
       consumes:
-      - application/json
-      description: Login with username and password
+      - text/html
+      description: Renders the login form
       produces:
-      - application/json
-      responses: {}
-      summary: User login page
-      tags:
-      - auth
-    post:
-      consumes:
-      - application/json
-      description: Login with username and password
-      parameters:
-      - description: login request
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/handler.LoginRequest'
-      produces:
-      - application/json
+      - text/html
       responses:
         "200":
-          description: OK
+          description: HTML page
           schema:
-            $ref: '#/definitions/handler.LoginResponse'
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Login page
+      tags:
+      - user
+    post:
+      consumes:
+      - application/x-www-form-urlencoded
+      description: Authenticates a user with login and password, sets access cookie,
+        and redirects to the account page
+      parameters:
+      - description: Login
+        in: formData
+        name: login
+        required: true
+        type: string
+      - description: Password
+        in: formData
+        name: password
+        required: true
+        type: string
+      produces:
+      - text/html
+      responses:
+        "303":
+          description: See Other
+          schema:
+            type: string
         "400":
-          description: Bad Request
+          description: Bad request
           schema:
-            $ref: '#/definitions/handler.ErrorResponse'
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "404":
+          description: Not found
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
       summary: User login
       tags:
-      - auth
+      - user
+  /user/register:
+    get:
+      consumes:
+      - text/html
+      description: Renders the user registration form
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML page
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Registration page
+      tags:
+      - user
 swagger: "2.0"

@@ -27,12 +27,14 @@ type ErrorResponse struct {
 }
 
 // Login godoc
-// @Summary User login page
-// @Description Login with username and password
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Router /user/login [get].
+// @Summary Login page
+// @Description Renders the login form
+// @Tags user
+// @Accept html
+// @Produce html
+// @Success 200 {string} string "HTML page"
+// @Failure 500 {string} string "Internal server error"
+// @Router /user/login [get]
 func (h *UserHandler) Login(w http.ResponseWriter, _ *http.Request) {
 	err := h.template.ExecuteTemplate(w, "login.html", nil)
 	if err != nil {
@@ -42,14 +44,18 @@ func (h *UserHandler) Login(w http.ResponseWriter, _ *http.Request) {
 
 // LoginUser godoc
 // @Summary User login
-// @Description Login with username and password
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param request body LoginUserRequest true "login request"
-// @Success 200 {object} LoginUserResponse
-// @Failure 400 {object} ErrorResponse
-// @Router /user/login [post].
+// @Description Authenticates a user with login and password, sets access cookie, and redirects to the account page
+// @Tags user
+// @Accept application/x-www-form-urlencoded
+// @Produce html
+// @Param login formData string true "Login"
+// @Param password formData string true "Password"
+// @Success 303 {string} string "See Other"
+// @Failure 400 {string} string "Bad request"
+// @Failure 401 {string} string "Unauthorized"
+// @Failure 404 {string} string "Not found"
+// @Failure 500 {string} string "Internal server error"
+// @Router /user/login [post]
 func (h *UserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 	login := r.FormValue("login")
 	password := r.FormValue("password")

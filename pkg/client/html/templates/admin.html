@@ -32,7 +32,8 @@
             <td>{{.CreatedAt}}</td>
             <td>{{.UpdatedAt}}</td>
             <td>
-                <form method="POST" action="/admin/review/{{.ID}}/status" class="form-inline">
+                <form method="POST" action="/admin/review/update" class="form-inline">
+                    <input type="hidden" name="reviewID" value="{{.ID}}">
                     <select name="status" class="form-control form-control-sm mr-2">
                         <option value="pending">pending</option>
                         <option value="processing">processing</option>

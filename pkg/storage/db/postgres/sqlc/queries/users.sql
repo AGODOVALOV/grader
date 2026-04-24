@@ -102,3 +102,8 @@ from users
          left join reviews on users.id = reviews.userid
          left join tasks on reviews.task = tasks.id
 where users.admin = false;
+
+-- name: UpdateReviewStatusByID :exec
+UPDATE reviews
+SET status = $1
+WHERE id = $2;
