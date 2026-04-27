@@ -13,6 +13,7 @@ import (
 	"github.com/AGODOVALOV/grader/pkg/common"
 	"github.com/AGODOVALOV/grader/pkg/storage/s3"
 	"github.com/AGODOVALOV/grader/pkg/token"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -213,5 +214,24 @@ func (s *UserService) UpdateReviewStatus(ctx context.Context, id int64, status s
 			Valid:        true,
 		},
 		ID: id,
+	})
+}
+
+func (s *UserService) CreateOutboxReview(ctx context.Context,
+	eventID uuid.UUID, userID int64, reviewID int64, payload []byte) error {
+	return s.repo.Queries.CreateOutboxReview(ctx, repo.CreateOutboxReviewParams{
+		EventID: pgtype.UUID{
+			Bytes: eventID,
+			Valid: true,
+		},
+		Userid: pgtype.Int8{
+			Int64: userID,
+			Valid: true,
+		},
+		Reviewid: pgtype.Int8{
+			Int64: reviewID,
+			Valid: true,
+		},
+		Payload: payload,
 	})
 }

@@ -27,7 +27,7 @@ var templateFS embed.FS
 // Server represents the HTTP server.
 type Server struct {
 	server *http.Server
-	user   *user.User
+	User   *user.User
 	token  token.Maker
 }
 
@@ -59,7 +59,7 @@ func NewClientServer(ctx context.Context, cfg *config.Config, r *repo.Repo, fSto
 
 	return &Server{
 		server: srv,
-		user:   usr,
+		User:   usr,
 		token:  tokenMaker,
 	}, nil
 }

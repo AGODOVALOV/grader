@@ -11,6 +11,31 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const createOutboxReview = `-- name: CreateOutboxReview :exec
+INSERT INTO outbox_reviews (event_id,
+                            userid,
+                            reviewid,
+                            payload)
+VALUES ($1, $2, $3, $4)
+`
+
+type CreateOutboxReviewParams struct {
+	EventID  pgtype.UUID
+	Userid   pgtype.Int8
+	Reviewid pgtype.Int8
+	Payload  []byte
+}
+
+func (q *Queries) CreateOutboxReview(ctx context.Context, arg CreateOutboxReviewParams) error {
+	_, err := q.db.Exec(ctx, createOutboxReview,
+		arg.EventID,
+		arg.Userid,
+		arg.Reviewid,
+		arg.Payload,
+	)
+	return err
+}
+
 const createReview = `-- name: CreateReview :one
 INSERT INTO reviews (userid, task, fileID)
 VALUES ($1, $2, $3)
@@ -79,6 +104,48 @@ WHERE id = $1
 func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
 	_, err := q.db.Exec(ctx, deleteUser, id)
 	return err
+}
+
+const getPendingOutboxReviews = `-- name: GetPendingOutboxReviews :many
+SELECT id, event_id, userid, reviewid, payload, status, created_at, processed_at, attempts, max_attempts, next_retry_at, last_error
+FROM outbox_reviews
+WHERE status = 'pending'
+  AND (next_retry_at IS NULL OR next_retry_at <= NOW())
+ORDER BY created_at
+LIMIT 50 FOR UPDATE SKIP LOCKED
+`
+
+func (q *Queries) GetPendingOutboxReviews(ctx context.Context) ([]OutboxReview, error) {
+	rows, err := q.db.Query(ctx, getPendingOutboxReviews)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []OutboxReview
+	for rows.Next() {
+		var i OutboxReview
+		if err := rows.Scan(
+			&i.ID,
+			&i.EventID,
+			&i.Userid,
+			&i.Reviewid,
+			&i.Payload,
+			&i.Status,
+			&i.CreatedAt,
+			&i.ProcessedAt,
+			&i.Attempts,
+			&i.MaxAttempts,
+			&i.NextRetryAt,
+			&i.LastError,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getPendingReviews = `-- name: GetPendingReviews :many

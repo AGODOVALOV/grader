@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"fmt"
 	"mime/multipart"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/AGODOVALOV/grader/pkg/client/session"
 	"github.com/AGODOVALOV/grader/pkg/logger"
+	"github.com/google/uuid"
 )
 
 // UploadTask godoc
@@ -54,7 +56,7 @@ func (h *UserHandler) UploadTask(w http.ResponseWriter, r *http.Request) {
 
 	objectName := fmt.Sprintf("review_%d_%d_%s", currSession.UserID, taskNum, header.Filename)
 
-	_, err = h.Service.CreateNewReview(
+	newReviewID, err := h.Service.CreateNewReview(
 		r.Context(),
 		currSession.UserID,
 		int32(taskNum),
@@ -63,6 +65,19 @@ func (h *UserHandler) UploadTask(w http.ResponseWriter, r *http.Request) {
 		header.Size)
 	if err != nil {
 		logger.Z(r.Context()).Error(r.Context(), "upload file", err.Error())
+		return
+	}
+
+	payload := map[string]interface{}{
+		"external_grader": "https://127.0.0.1:8021/api/v1/grader",
+		"grader_payload":  "payload",
+	}
+
+	jsonBytes, err := json.Marshal(payload)
+
+	err = h.Service.CreateOutboxReview(r.Context(), uuid.New(), currSession.UserID, newReviewID, jsonBytes)
+	if err != nil {
+		logger.Z(r.Context()).Error(r.Context(), "create outbox event", err.Error())
 		return
 	}
 

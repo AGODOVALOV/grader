@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	server "github.com/AGODOVALOV/grader/pkg/client"
+	"github.com/AGODOVALOV/grader/pkg/client/outbox"
 	"github.com/AGODOVALOV/grader/pkg/client/user/repo"
 	"github.com/AGODOVALOV/grader/pkg/config"
 	"github.com/AGODOVALOV/grader/pkg/logger"
@@ -59,13 +60,21 @@ func main() {
 		return
 	}
 
-	_ = fStorage
-
+	// init web server
 	srv, err := server.NewClientServer(ctx, appCfg.GetConfig(), repoDB, fStorage)
 	if err != nil {
 		z.Error(ctx, "create server", err.Error())
 		return
 	}
 
+	// start outbox transfer
+	outboxTransfer := outbox.NewOutbox(srv.User, &appCfg.GetConfig().MsgQueue)
+	err = outboxTransfer.StartSending(ctx)
+	if err != nil {
+		z.Error(ctx, "start outbox transfer", err.Error())
+		return
+	}
+
+	// start server
 	srv.ListenAndServe(ctx)
 }

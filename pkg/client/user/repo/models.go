@@ -11,6 +11,50 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type OutboxStatus string
+
+const (
+	OutboxStatusPending    OutboxStatus = "pending"
+	OutboxStatusProcessing OutboxStatus = "processing"
+	OutboxStatusFailed     OutboxStatus = "failed"
+	OutboxStatusDone       OutboxStatus = "done"
+)
+
+func (e *OutboxStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = OutboxStatus(s)
+	case string:
+		*e = OutboxStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for OutboxStatus: %T", src)
+	}
+	return nil
+}
+
+type NullOutboxStatus struct {
+	OutboxStatus OutboxStatus
+	Valid        bool // Valid is true if OutboxStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullOutboxStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.OutboxStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.OutboxStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullOutboxStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.OutboxStatus), nil
+}
+
 type ReviewStatus string
 
 const (
@@ -53,6 +97,21 @@ func (ns NullReviewStatus) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.ReviewStatus), nil
+}
+
+type OutboxReview struct {
+	ID          int64
+	EventID     pgtype.UUID
+	Userid      pgtype.Int8
+	Reviewid    pgtype.Int8
+	Payload     []byte
+	Status      OutboxStatus
+	CreatedAt   pgtype.Timestamptz
+	ProcessedAt pgtype.Timestamptz
+	Attempts    pgtype.Int4
+	MaxAttempts int32
+	NextRetryAt pgtype.Timestamptz
+	LastError   pgtype.Text
 }
 
 type Review struct {

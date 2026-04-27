@@ -107,3 +107,18 @@ where users.admin = false;
 UPDATE reviews
 SET status = $1
 WHERE id = $2;
+
+-- name: CreateOutboxReview :exec
+INSERT INTO outbox_reviews (event_id,
+                            userid,
+                            reviewid,
+                            payload)
+VALUES ($1, $2, $3, $4);
+
+-- name: GetPendingOutboxReviews :many
+SELECT *
+FROM outbox_reviews
+WHERE status = 'pending'
+  AND (next_retry_at IS NULL OR next_retry_at <= NOW())
+ORDER BY created_at
+LIMIT 50 FOR UPDATE SKIP LOCKED;
