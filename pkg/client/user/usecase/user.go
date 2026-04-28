@@ -5,16 +5,20 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"mime/multipart"
 	"time"
 
 	"github.com/AGODOVALOV/grader/pkg/client/user/dto"
 	"github.com/AGODOVALOV/grader/pkg/client/user/repo"
 	"github.com/AGODOVALOV/grader/pkg/common"
+	"github.com/AGODOVALOV/grader/pkg/logger"
+	"github.com/AGODOVALOV/grader/pkg/queue/config"
 	"github.com/AGODOVALOV/grader/pkg/storage/s3"
 	"github.com/AGODOVALOV/grader/pkg/token"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/streadway/amqp"
 )
 
 // UserService provides methods for user-related operations.
@@ -234,4 +238,134 @@ func (s *UserService) CreateOutboxReview(ctx context.Context,
 		},
 		Payload: payload,
 	})
+}
+
+func (s *UserService) ProduceMessages(ctx context.Context, rCh *amqp.Channel, cfg *config.QueueMsgChannel) error {
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
+		tx, err := s.repo.DB.Pool.Begin(ctx)
+		if err != nil {
+			continue
+		}
+
+		qtx := s.repo.Queries.WithTx(tx)
+		tasks, err := qtx.GetOutboxReviewsBatch(ctx)
+		if err != nil {
+			err = tx.Rollback(ctx)
+			if err != nil {
+				logger.Z(ctx).Error(ctx, "rollback", err.Error())
+			}
+			continue
+		}
+
+		if len(tasks) == 0 {
+			err = tx.Commit(ctx)
+			if err != nil {
+				logger.Z(ctx).Error(ctx, "commit", err.Error())
+			}
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(300 * time.Millisecond):
+			}
+			continue
+		}
+
+		ids := make([]int64, 0, len(tasks))
+		for _, t := range tasks {
+			ids = append(ids, t.ID)
+		}
+
+		err = qtx.MarkOutboxReviewsProcessingMany(ctx, ids)
+		if err != nil {
+			err = tx.Rollback(ctx)
+			if err != nil {
+				logger.Z(ctx).Error(ctx, "rollback", err.Error())
+			}
+			continue
+		}
+
+		if err := tx.Commit(ctx); err != nil {
+			continue
+		}
+
+		for _, r := range tasks {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			default:
+			}
+			err := publishToRabbit(ctx, r, rCh, cfg)
+			if err == nil {
+				err = s.repo.Queries.MarkOutboxReviewProcessingOne(ctx, r.ID)
+				if err != nil {
+					logger.Z(ctx).Error(ctx, "Mark Outbox Review Processing One", err.Error())
+				}
+				err = s.repo.Queries.UpdateReviewStatusByID(ctx, repo.UpdateReviewStatusByIDParams{
+					Status: repo.NullReviewStatus{
+						ReviewStatus: "processing",
+						Valid:        true,
+					},
+					ID: r.Reviewid.Int64,
+				})
+				if err != nil {
+					logger.Z(ctx).Error(ctx, "Update Review Status By ID", err.Error())
+				}
+				continue
+			}
+
+			delay := time.Duration(math.Pow(2, float64(r.Attempts.Int32))) * time.Second
+			if r.Attempts.Int32+1 >= r.MaxAttempts {
+				_ = s.repo.Queries.MarkOutboxReviewFailedFinal(
+					ctx,
+					repo.MarkOutboxReviewFailedFinalParams{
+						ID:        r.ID,
+						LastError: pgtype.Text{String: err.Error(), Valid: true},
+					},
+				)
+			} else {
+				_ = s.repo.Queries.MarkOutboxReviewRetry(ctx, repo.MarkOutboxReviewRetryParams{
+					ID:        r.ID,
+					Column2:   int32(delay.Seconds()),
+					LastError: pgtype.Text{String: err.Error(), Valid: true},
+				})
+			}
+			logger.Z(ctx).Error(ctx, "publish msg", err.Error())
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(300 * time.Millisecond):
+		}
+	}
+}
+
+func publishToRabbit(ctx context.Context, review repo.OutboxReview, rCh *amqp.Channel, cfg *config.QueueMsgChannel) error {
+	err := rCh.Publish(
+		"",
+		cfg.Name,
+		false,
+		false,
+		amqp.Publishing{
+			MessageId:    review.EventID.String(),
+			DeliveryMode: amqp.Persistent,
+			ContentType:  "text/plain",
+			Body:         review.Payload,
+		})
+	if err != nil {
+		logger.Z(ctx).Error(ctx, "publish msg", err.Error())
+		return err
+	}
+
+	logger.Z(ctx).Debug(ctx, "publish message", "successful", map[string]string{
+		"channel": cfg.Name,
+		"msgID":   review.EventID.String(),
+		"payload": string(review.Payload),
+	})
+	return nil
 }

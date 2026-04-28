@@ -122,3 +122,44 @@ WHERE status = 'pending'
   AND (next_retry_at IS NULL OR next_retry_at <= NOW())
 ORDER BY created_at
 LIMIT 50 FOR UPDATE SKIP LOCKED;
+
+-- name: GetOutboxReviewsBatch :many
+SELECT *
+FROM outbox_reviews
+WHERE status = 'pending'
+  AND attempts < max_attempts
+  AND (next_retry_at IS NULL OR next_retry_at <= NOW())
+ORDER BY created_at
+LIMIT 50 FOR UPDATE SKIP LOCKED;
+
+-- name: MarkOutboxReviewProcessingOne :exec
+UPDATE outbox_reviews
+SET status       = 'processing',
+    processed_at = NOW()
+WHERE id = $1;
+
+-- name: MarkOutboxReviewFailed :exec
+UPDATE outbox_reviews
+SET attempts      = attempts + 1,
+    next_retry_at = NOW() + ($2 * INTERVAL '1 second'),
+    last_error    = $3
+WHERE id = $1;
+
+-- name: MarkOutboxReviewsProcessingMany :exec
+UPDATE outbox_reviews
+SET status = 'processing'
+WHERE id = ANY ($1::bigint[]);
+
+-- name: MarkOutboxReviewFailedFinal :exec
+UPDATE outbox_reviews
+SET status     = 'failed',
+    last_error = $2
+WHERE id = $1;
+
+-- name: MarkOutboxReviewRetry :exec
+UPDATE outbox_reviews
+SET attempts = attempts + 1,
+    next_retry_at = NOW() + ($2 * INTERVAL '1 second'),
+    last_error = $3,
+    status = 'pending'
+WHERE id = $1;

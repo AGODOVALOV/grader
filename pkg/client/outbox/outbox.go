@@ -3,9 +3,10 @@ package outbox
 
 import (
 	"context"
-	"fmt"
+	"sync"
 
 	"github.com/AGODOVALOV/grader/pkg/client/user"
+	"github.com/AGODOVALOV/grader/pkg/client/user/usecase"
 	"github.com/AGODOVALOV/grader/pkg/logger"
 	"github.com/AGODOVALOV/grader/pkg/queue/config"
 	"github.com/streadway/amqp"
@@ -13,57 +14,56 @@ import (
 
 // Outbox represents the outbox.
 type Outbox struct {
-	user *user.User
-	cfg  *config.Config
-	rCh  *amqp.Channel
+	userService *usecase.UserService
+	cfg         *config.Config
+	wg          *sync.WaitGroup
 }
 
 // NewOutbox creates a new outbox.
 func NewOutbox(user *user.User, cfg *config.Config) *Outbox {
 	return &Outbox{
-		user: user,
-		cfg:  cfg,
+		userService: user.Handler.Service,
+		cfg:         cfg,
+		wg:          &sync.WaitGroup{},
 	}
 }
 
 // StartSending starts sending messages.
 func (out *Outbox) StartSending(ctx context.Context) error {
-
-	rCh, err := out.getChannel(ctx)
-	if err != nil {
-		return err
-	}
-
-	out.rCh = rCh
-
-	logger.Z(ctx).Info(ctx, "connection with rabbit is ok", "connection is ok")
-
-	return nil
-}
-
-func (out *Outbox) getChannel(ctx context.Context) (*amqp.Channel, error) {
 	rConn, err := amqp.Dial(out.cfg.Broker.Rabbit.URL)
 	if err != nil {
 		logger.Z(ctx).Error(ctx, "rabbit connection", err.Error())
-		return nil, err
+		return err
 	}
+
 	defer func(rConn *amqp.Connection) {
 		err := rConn.Close()
 		if err != nil {
-			fmt.Println(err)
+			logger.Z(ctx).Error(ctx, "rabbit connection close", err.Error())
 		}
 	}(rConn)
 
 	rCh, err := rConn.Channel()
+
 	defer func(rCh *amqp.Channel) {
 		err := rCh.Close()
 		if err != nil {
-			fmt.Println(err)
+			logger.Z(ctx).Error(ctx, "rabbit channel close", err.Error())
 		}
 	}(rCh)
-	if err != nil {
-		logger.Z(ctx).Error(ctx, "error open channel", err.Error())
-		return nil, err
+
+	logger.Z(ctx).Info(ctx, "connection with rabbit is ok", "connection is ok")
+
+	for _, cfg := range out.cfg.Messaging.Channels {
+		out.wg.Go(func() {
+			err = out.userService.ProduceMessages(ctx, rCh, &cfg)
+			if err != nil {
+				logger.Z(ctx).Error(ctx, "error producing messages", err.Error())
+				return
+			}
+		})
 	}
-	return rCh, nil
+	out.wg.Wait()
+
+	return nil
 }

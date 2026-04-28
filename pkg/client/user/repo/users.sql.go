@@ -106,6 +106,49 @@ func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
 	return err
 }
 
+const getOutboxReviewsBatch = `-- name: GetOutboxReviewsBatch :many
+SELECT id, event_id, userid, reviewid, payload, status, created_at, processed_at, attempts, max_attempts, next_retry_at, last_error
+FROM outbox_reviews
+WHERE status = 'pending'
+  AND attempts < max_attempts
+  AND (next_retry_at IS NULL OR next_retry_at <= NOW())
+ORDER BY created_at
+LIMIT 50 FOR UPDATE SKIP LOCKED
+`
+
+func (q *Queries) GetOutboxReviewsBatch(ctx context.Context) ([]OutboxReview, error) {
+	rows, err := q.db.Query(ctx, getOutboxReviewsBatch)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []OutboxReview
+	for rows.Next() {
+		var i OutboxReview
+		if err := rows.Scan(
+			&i.ID,
+			&i.EventID,
+			&i.Userid,
+			&i.Reviewid,
+			&i.Payload,
+			&i.Status,
+			&i.CreatedAt,
+			&i.ProcessedAt,
+			&i.Attempts,
+			&i.MaxAttempts,
+			&i.NextRetryAt,
+			&i.LastError,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getPendingOutboxReviews = `-- name: GetPendingOutboxReviews :many
 SELECT id, event_id, userid, reviewid, payload, status, created_at, processed_at, attempts, max_attempts, next_retry_at, last_error
 FROM outbox_reviews
@@ -518,6 +561,85 @@ func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const markOutboxReviewFailed = `-- name: MarkOutboxReviewFailed :exec
+UPDATE outbox_reviews
+SET attempts      = attempts + 1,
+    next_retry_at = NOW() + ($2 * INTERVAL '1 second'),
+    last_error    = $3
+WHERE id = $1
+`
+
+type MarkOutboxReviewFailedParams struct {
+	ID        int64
+	Column2   interface{}
+	LastError pgtype.Text
+}
+
+func (q *Queries) MarkOutboxReviewFailed(ctx context.Context, arg MarkOutboxReviewFailedParams) error {
+	_, err := q.db.Exec(ctx, markOutboxReviewFailed, arg.ID, arg.Column2, arg.LastError)
+	return err
+}
+
+const markOutboxReviewFailedFinal = `-- name: MarkOutboxReviewFailedFinal :exec
+UPDATE outbox_reviews
+SET status     = 'failed',
+    last_error = $2
+WHERE id = $1
+`
+
+type MarkOutboxReviewFailedFinalParams struct {
+	ID        int64
+	LastError pgtype.Text
+}
+
+func (q *Queries) MarkOutboxReviewFailedFinal(ctx context.Context, arg MarkOutboxReviewFailedFinalParams) error {
+	_, err := q.db.Exec(ctx, markOutboxReviewFailedFinal, arg.ID, arg.LastError)
+	return err
+}
+
+const markOutboxReviewProcessingOne = `-- name: MarkOutboxReviewProcessingOne :exec
+UPDATE outbox_reviews
+SET status       = 'processing',
+    processed_at = NOW()
+WHERE id = $1
+`
+
+func (q *Queries) MarkOutboxReviewProcessingOne(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, markOutboxReviewProcessingOne, id)
+	return err
+}
+
+const markOutboxReviewRetry = `-- name: MarkOutboxReviewRetry :exec
+UPDATE outbox_reviews
+SET attempts = attempts + 1,
+    next_retry_at = NOW() + ($2 * INTERVAL '1 second'),
+    last_error = $3,
+    status = 'pending'
+WHERE id = $1
+`
+
+type MarkOutboxReviewRetryParams struct {
+	ID        int64
+	Column2   interface{}
+	LastError pgtype.Text
+}
+
+func (q *Queries) MarkOutboxReviewRetry(ctx context.Context, arg MarkOutboxReviewRetryParams) error {
+	_, err := q.db.Exec(ctx, markOutboxReviewRetry, arg.ID, arg.Column2, arg.LastError)
+	return err
+}
+
+const markOutboxReviewsProcessingMany = `-- name: MarkOutboxReviewsProcessingMany :exec
+UPDATE outbox_reviews
+SET status = 'processing'
+WHERE id = ANY ($1::bigint[])
+`
+
+func (q *Queries) MarkOutboxReviewsProcessingMany(ctx context.Context, dollar_1 []int64) error {
+	_, err := q.db.Exec(ctx, markOutboxReviewsProcessingMany, dollar_1)
+	return err
 }
 
 const updateReviewStatus = `-- name: UpdateReviewStatus :exec

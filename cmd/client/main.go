@@ -69,11 +69,13 @@ func main() {
 
 	// start outbox transfer
 	outboxTransfer := outbox.NewOutbox(srv.User, &appCfg.GetConfig().MsgQueue)
-	err = outboxTransfer.StartSending(ctx)
-	if err != nil {
-		z.Error(ctx, "start outbox transfer", err.Error())
-		return
-	}
+	go func() {
+		err = outboxTransfer.StartSending(ctx)
+		if err != nil {
+			z.Error(ctx, "start outbox transfer", err.Error())
+			return
+		}
+	}()
 
 	// start server
 	srv.ListenAndServe(ctx)
