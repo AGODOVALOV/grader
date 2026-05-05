@@ -13,6 +13,10 @@ web-server:
   write-timeout: 10s
   idle-timeout: 60s
   shutdown-timeout: 5s
+  rate_limiter:
+    type: fixed_window
+    max_requests: 10
+    interval: 1s
 
 token:
   secret: 3z9KfP8vQwX2mLr7TnY5uB1sD4eH6jA0cVxRkUqWZpM=

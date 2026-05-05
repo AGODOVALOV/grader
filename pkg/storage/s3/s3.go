@@ -8,6 +8,7 @@ import (
 	"github.com/AGODOVALOV/grader/pkg/logger"
 	"github.com/AGODOVALOV/grader/pkg/storage/s3/s3minio"
 	"github.com/AGODOVALOV/grader/pkg/storage/s3/s3minio/config"
+	"github.com/google/uuid"
 	"github.com/minio/minio-go/v7"
 )
 
@@ -43,6 +44,7 @@ func (fs *FileStorage) UploadFile(
 	file multipart.File,
 	size int64,
 	objectName string,
+	eventID *uuid.UUID,
 ) (string, error) {
 	err := s3minio.UploadFile(
 		ctx,
@@ -50,7 +52,9 @@ func (fs *FileStorage) UploadFile(
 		file,
 		size,
 		objectName,
-		fs.cfg.Bucket)
+		fs.cfg.Bucket,
+		eventID,
+	)
 	if err != nil {
 		return "", err
 	}

@@ -8,6 +8,7 @@ import (
 
 	"github.com/AGODOVALOV/grader/pkg/client/session"
 	"github.com/AGODOVALOV/grader/pkg/logger"
+	"github.com/google/uuid"
 )
 
 // UploadTask godoc
@@ -52,16 +53,18 @@ func (h *UserHandler) UploadTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	eventID := new(uuid.New())
+
 	fileName := fmt.Sprintf("review_%d_%d_%s", currSession.UserID, taskNum, header.Filename)
 
-	err = h.Service.UploadFileToReviewS3(r.Context(), fileName, file, header.Size)
+	err = h.Service.UploadFileToReviewS3(r.Context(), fileName, file, header.Size, eventID)
 	if err != nil {
 		logger.Z(r.Context()).Error(r.Context(), "upload file", err.Error())
 		http.Error(w, "request error", http.StatusInternalServerError)
 		return
 	}
 
-	err = h.Service.CreateAndOutboxReviewTx(r.Context(), currSession.UserID, taskNum, fileName)
+	err = h.Service.CreateAndOutboxReviewTx(r.Context(), currSession.UserID, taskNum, fileName, eventID)
 	if err != nil {
 		logger.Z(r.Context()).Error(r.Context(), "upload file", err.Error())
 		http.Error(w, "request error", http.StatusInternalServerError)

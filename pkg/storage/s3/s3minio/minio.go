@@ -8,8 +8,10 @@ import (
 
 	"github.com/AGODOVALOV/grader/pkg/logger"
 	"github.com/AGODOVALOV/grader/pkg/storage/s3/s3minio/config"
+	"github.com/google/uuid"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/minio/minio-go/v7/pkg/tags"
 )
 
 // NewMinioClient creates a new Minio client.
@@ -40,12 +42,32 @@ func UploadFile(
 	size int64,
 	objectName string,
 	bucketName string,
+	eventID *uuid.UUID,
 ) error {
 	info, err := client.PutObject(ctx, bucketName, objectName, file, size, minio.PutObjectOptions{
 		ContentType: "application/octet-stream",
 	})
 	if err != nil {
 		logger.Z(ctx).Error(ctx, "upload file", err.Error(), map[string]string{
+			"bucket":     bucketName,
+			"objectName": objectName,
+		})
+	}
+
+	objectTags, err := tags.NewTags(map[string]string{
+		"unique":  "true",
+		"eventID": eventID.String(),
+	}, true)
+	if err != nil {
+		logger.Z(ctx).Error(ctx, "tag creation", err.Error(), map[string]string{
+			"bucket":     bucketName,
+			"objectName": objectName,
+		})
+	}
+
+	err = client.PutObjectTagging(ctx, bucketName, objectName, objectTags, minio.PutObjectTaggingOptions{})
+	if err != nil {
+		logger.Z(ctx).Error(ctx, "tag creation", err.Error(), map[string]string{
 			"bucket":     bucketName,
 			"objectName": objectName,
 		})

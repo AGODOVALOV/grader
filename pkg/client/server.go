@@ -16,6 +16,7 @@ import (
 	"github.com/AGODOVALOV/grader/pkg/client/user/usecase"
 	"github.com/AGODOVALOV/grader/pkg/config/config"
 	"github.com/AGODOVALOV/grader/pkg/logger"
+	"github.com/AGODOVALOV/grader/pkg/rate_limiter"
 	"github.com/AGODOVALOV/grader/pkg/storage/s3"
 	"github.com/AGODOVALOV/grader/pkg/token"
 	"github.com/swaggo/http-swagger"
@@ -26,9 +27,10 @@ var templateFS embed.FS
 
 // Server represents the HTTP server.
 type Server struct {
-	server *http.Server
-	User   *user.User
-	token  token.Maker
+	server      *http.Server
+	User        *user.User
+	token       token.Maker
+	rateLimiter rate_limiter.Limiter
 }
 
 // NewClientServer creates a new HTTP server.
@@ -45,8 +47,12 @@ func NewClientServer(ctx context.Context, cfg *config.Config, r *repo.Repo, fSto
 	// configure router
 	router := configureRouter(usr)
 
+	//limiter
+	limiter := rate_limiter.NewRateLimiter(ctx, cfg.WebServer.RateLimiter)
+
 	// add middleware
-	handlerMux := middleware.AccessLogWithCtx(ctx, router)
+	handlerMux := middleware.GlobalRateLimit(limiter, router)
+	handlerMux = middleware.AccessLogWithCtx(ctx, handlerMux)
 	handlerMux = middleware.Auth(tokenMaker, handlerMux)
 
 	srv := &http.Server{
@@ -58,9 +64,10 @@ func NewClientServer(ctx context.Context, cfg *config.Config, r *repo.Repo, fSto
 	}
 
 	return &Server{
-		server: srv,
-		User:   usr,
-		token:  tokenMaker,
+		server:      srv,
+		User:        usr,
+		token:       tokenMaker,
+		rateLimiter: limiter,
 	}, nil
 }
 

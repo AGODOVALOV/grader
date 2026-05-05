@@ -41,7 +41,7 @@ func (l *FixedWindowLimiter) startPeriodCountRefresh(ctx context.Context, interv
 func (l *FixedWindowLimiter) Allow() bool {
 	count := atomic.LoadInt32(&l.count)
 
-	if count > int32(l.limit) {
+	if count > l.limit {
 		return false
 	}
 
@@ -49,5 +49,5 @@ func (l *FixedWindowLimiter) Allow() bool {
 		count = atomic.LoadInt32(&l.count)
 	}
 
-	return count < int32(l.limit)
+	return count < l.limit
 }

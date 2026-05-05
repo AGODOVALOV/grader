@@ -137,12 +137,14 @@ func (s *UserService) UploadFileToReviewS3(
 	objectName string,
 	file multipart.File,
 	size int64,
+	eventID *uuid.UUID,
 ) error {
 	_, err := s.fStorage.UploadFile(
 		ctx,
 		file,
 		size,
-		objectName)
+		objectName,
+		eventID)
 	if err != nil {
 		return err
 	}
@@ -388,6 +390,7 @@ func (s *UserService) CreateAndOutboxReviewTx(
 	userID int64,
 	taskNum int64,
 	filename string,
+	eventID *uuid.UUID,
 ) error {
 
 	tx, err := s.repo.DB.Pool.Begin(ctx)
@@ -439,7 +442,7 @@ func (s *UserService) CreateAndOutboxReviewTx(
 
 	err = qtx.CreateOutboxReview(ctx, repo.CreateOutboxReviewParams{
 		EventID: pgtype.UUID{
-			Bytes: uuid.New(),
+			Bytes: *eventID,
 			Valid: true,
 		},
 		Userid: pgtype.Int8{

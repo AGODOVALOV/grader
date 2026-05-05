@@ -54,7 +54,7 @@ func main() {
 	}
 
 	// init file storage
-	fStorage, err := s3.NewFileStorage(ctx, appCfg.GetConfig().FileStorage)
+	fStorage, err := s3.NewFileStorage(ctx, &appCfg.GetConfig().FileStorage)
 	if err != nil {
 		z.Error(ctx, "init file storage", err.Error())
 		return
