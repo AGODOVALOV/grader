@@ -18,7 +18,7 @@ type FileStorage struct {
 }
 
 // NewFileStorage creates a new instance of FileStorage.
-func NewFileStorage(ctx context.Context, cfg config.Config) (*FileStorage, error) {
+func NewFileStorage(ctx context.Context, cfg *config.Config) (*FileStorage, error) {
 	client, err := s3minio.NewMinioClient(cfg)
 	if err != nil {
 		logger.Z(ctx).Error(ctx, "NewFileStorage", err.Error())
@@ -33,7 +33,7 @@ func NewFileStorage(ctx context.Context, cfg config.Config) (*FileStorage, error
 
 	return &FileStorage{
 		Client: client,
-		cfg:    &cfg,
+		cfg:    cfg,
 	}, nil
 }
 
@@ -55,4 +55,19 @@ func (fs *FileStorage) UploadFile(
 		return "", err
 	}
 	return "", nil
+}
+
+func (fs *FileStorage) DownloadFile(
+	ctx context.Context,
+	objectName string) ([]byte, error) {
+	fileData, err := s3minio.DownloadFile(
+		ctx,
+		fs.Client,
+		objectName,
+		fs.cfg.Bucket)
+	if err != nil {
+		return nil, err
+	}
+
+	return fileData, nil
 }

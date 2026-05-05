@@ -2,26 +2,29 @@ package workerpool
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/AGODOVALOV/grader/pkg/config/config"
 	"github.com/AGODOVALOV/grader/pkg/dto"
 	graderconfig "github.com/AGODOVALOV/grader/pkg/grader/config"
+	"github.com/AGODOVALOV/grader/pkg/grader/workerpool/worker"
 	"github.com/AGODOVALOV/grader/pkg/logger"
+	"github.com/AGODOVALOV/grader/pkg/storage/s3"
 )
 
 type WorkerPool struct {
-	cfg   *graderconfig.Config
-	Tasks chan *dto.GraderPayload
-	wg    *sync.WaitGroup
+	cfg    *graderconfig.Config
+	Tasks  chan *dto.GraderPayload
+	wg     *sync.WaitGroup
+	worker *worker.Worker
 }
 
-func NewWorkerPool(cfg *config.Config) *WorkerPool {
+func NewWorkerPool(cfg *config.Config, fStorage *s3.FileStorage) *WorkerPool {
 	return &WorkerPool{
-		Tasks: make(chan *dto.GraderPayload, cfg.Grader.Workers*20),
-		cfg:   &cfg.Grader,
-		wg:    &sync.WaitGroup{},
+		Tasks:  make(chan *dto.GraderPayload, cfg.Grader.Workers*20),
+		cfg:    &cfg.Grader,
+		wg:     &sync.WaitGroup{},
+		worker: worker.NewWorker(fStorage),
 	}
 }
 
@@ -42,8 +45,13 @@ func (wp *WorkerPool) ProcessTask(ctx context.Context, ch <-chan *dto.GraderPayl
 			if !ok {
 				return
 			}
-
-			logger.Z(ctx).Debug(ctx, "process new task", fmt.Sprintf("%v", v))
+			err := wp.worker.DoJob(ctx, v)
+			if err != nil {
+				logger.Z(ctx).Error(ctx, "grader processing new task", err.Error(), map[string]string{
+					"userID":   v.UserID,
+					"reviewID": v.ReviewID,
+				})
+			}
 		}
 	}
 }

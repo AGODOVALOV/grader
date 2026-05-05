@@ -3,6 +3,7 @@ package s3minio
 
 import (
 	"context"
+	"io"
 	"mime/multipart"
 
 	"github.com/AGODOVALOV/grader/pkg/logger"
@@ -12,7 +13,7 @@ import (
 )
 
 // NewMinioClient creates a new Minio client.
-func NewMinioClient(cfg config.Config) (*minio.Client, error) {
+func NewMinioClient(cfg *config.Config) (*minio.Client, error) {
 	return minio.New(cfg.Endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(cfg.AccessKey, cfg.SecretKey, ""),
 		Secure: cfg.UseSSL,
@@ -56,4 +57,36 @@ func UploadFile(
 	})
 
 	return nil
+}
+
+func DownloadFile(ctx context.Context,
+	client *minio.Client,
+	name string,
+	bucket string) ([]byte, error) {
+
+	object, err := client.GetObject(ctx, bucket, name, minio.GetObjectOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	defer func(object *minio.Object) {
+		err := object.Close()
+		if err != nil {
+			logger.Z(ctx).Error(ctx, "download file", err.Error(), map[string]string{
+				"bucket":   bucket,
+				"fileName": name,
+			})
+		}
+	}(object)
+
+	fileBytes, err := io.ReadAll(object)
+	if err != nil {
+		logger.Z(ctx).Error(ctx, "read file", err.Error(), map[string]string{
+			"bucket":   bucket,
+			"fileName": name,
+		})
+		return nil, err
+	}
+
+	return fileBytes, nil
 }

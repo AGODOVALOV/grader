@@ -14,6 +14,6 @@ type Grader struct {
 
 func NewGrader(fStorage *s3.FileStorage, tknMaker token.Maker, cfg *config.Config) *Grader {
 	return &Grader{
-		Handler: handler.NewGraderHandler(fStorage, tknMaker, workerpool.NewWorkerPool(cfg)),
+		Handler: handler.NewGraderHandler(fStorage, tknMaker, workerpool.NewWorkerPool(cfg, fStorage)),
 	}
 }
