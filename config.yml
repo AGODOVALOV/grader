@@ -40,8 +40,16 @@ s3-minio:
   use-ssl: false
 
 grader:
-  url: https://localhost:8021/api/v1/grader
+  url: https://localhost:8022/api/v1/grader
   container: hw_checker
+  workers: 3
+  server:
+    host: localhost
+    port: 8022
+    read-timeout: 10s
+    write-timeout: 10s
+    idle-timeout: 60s
+    shutdown-timeout: 5s
 
 message_queue:
   broker:

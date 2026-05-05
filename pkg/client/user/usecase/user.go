@@ -3,15 +3,18 @@ package usecase
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
 	"mime/multipart"
+	"strconv"
 	"time"
 
 	"github.com/AGODOVALOV/grader/pkg/client/user/dto"
 	"github.com/AGODOVALOV/grader/pkg/client/user/repo"
 	"github.com/AGODOVALOV/grader/pkg/common"
+	dtograder "github.com/AGODOVALOV/grader/pkg/dto"
 	"github.com/AGODOVALOV/grader/pkg/logger"
 	"github.com/AGODOVALOV/grader/pkg/queue/config"
 	"github.com/AGODOVALOV/grader/pkg/storage/s3"
@@ -109,18 +112,7 @@ func (s *UserService) CreateNewReview(
 	userID int64,
 	taskNum int32,
 	objectName string,
-	file multipart.File,
-	size int64,
 ) (int64, error) {
-	_, err := s.fStorage.UploadFile(
-		ctx,
-		file,
-		size,
-		objectName)
-	if err != nil {
-		return 0, err
-	}
-
 	reviewNew, err := s.repo.Queries.CreateReview(ctx, repo.CreateReviewParams{
 		Userid: pgtype.Int8{
 			Int64: userID,
@@ -137,6 +129,25 @@ func (s *UserService) CreateNewReview(
 	}
 
 	return reviewNew.ID, nil
+}
+
+// UploadFileToReviewS3 creates a new review assignment for a user.
+func (s *UserService) UploadFileToReviewS3(
+	ctx context.Context,
+	objectName string,
+	file multipart.File,
+	size int64,
+) error {
+	_, err := s.fStorage.UploadFile(
+		ctx,
+		file,
+		size,
+		objectName)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // GetReviewsByUserID returns a list of review assignments for a user.
@@ -290,7 +301,9 @@ func (s *UserService) ProduceMessages(ctx context.Context, rCh *amqp.Channel, cf
 			continue
 		}
 
-		if err := tx.Commit(ctx); err != nil {
+		err = tx.Commit(ctx)
+
+		if err != nil {
 			continue
 		}
 
@@ -367,5 +380,91 @@ func publishToRabbit(ctx context.Context, review repo.OutboxReview, rCh *amqp.Ch
 		"msgID":   review.EventID.String(),
 		"payload": string(review.Payload),
 	})
+	return nil
+}
+
+func (s *UserService) CreateAndOutboxReviewTx(
+	ctx context.Context,
+	userID int64,
+	taskNum int64,
+	filename string,
+) error {
+
+	tx, err := s.repo.DB.Pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	qtx := s.repo.Queries.WithTx(tx)
+
+	newReview, err := qtx.CreateReview(ctx, repo.CreateReviewParams{
+		Userid: pgtype.Int8{
+			Int64: userID,
+			Valid: true,
+		},
+		Task: int32(taskNum),
+		Fileid: pgtype.Text{
+			String: filename,
+			Valid:  true,
+		},
+	})
+	if err != nil {
+		err := tx.Rollback(ctx)
+		if err != nil {
+			logger.Z(ctx).Error(ctx, "rollback", err.Error())
+			return err
+		}
+		return err
+	}
+
+	payloadGrader := dtograder.GraderPayload{
+		UserID:   strconv.FormatInt(userID, 10),
+		ReviewID: strconv.FormatInt(newReview.ID, 10),
+		FileIDs: []dtograder.File{
+			{"label_" + filename,
+				filename},
+		},
+		ContainerName: "default",
+	}
+
+	jsonBytes, err := json.Marshal(payloadGrader)
+	if err != nil {
+		logger.Z(ctx).Error(ctx, "create outbox event", err.Error())
+		err := tx.Rollback(ctx)
+		if err != nil {
+			logger.Z(ctx).Error(ctx, "rollback", err.Error())
+			return err
+		}
+		return err
+	}
+
+	err = qtx.CreateOutboxReview(ctx, repo.CreateOutboxReviewParams{
+		EventID: pgtype.UUID{
+			Bytes: uuid.New(),
+			Valid: true,
+		},
+		Userid: pgtype.Int8{
+			Int64: userID,
+			Valid: true,
+		},
+		Reviewid: pgtype.Int8{
+			Int64: newReview.ID,
+			Valid: true,
+		},
+		Payload: jsonBytes,
+	})
+	if err != nil {
+		err := tx.Rollback(ctx)
+		if err != nil {
+			logger.Z(ctx).Error(ctx, "rollback", err.Error())
+			return err
+		}
+		return err
+	}
+
+	err = tx.Commit(ctx)
+
+	if err != nil {
+		return err
+	}
 	return nil
 }
