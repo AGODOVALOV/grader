@@ -43,6 +43,8 @@ func (w *Worker) DoJob(ctx context.Context, payload *dto.GraderPayload) error {
 		return err
 	}
 
+	fName = fName + ".file"
+
 	//save files to local submission storage
 	switch payload.TaskID {
 	case "1":
@@ -64,10 +66,11 @@ func (w *Worker) DoJob(ctx context.Context, payload *dto.GraderPayload) error {
 	}
 
 	// start docker flow for tests files
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	//docker run --rm -it --network none -v "./infra/grader/submission/1/review_9_1_main.go:/app/1/game/main.go" --workdir /app/1/game grader:latest go test
+	//docker run --rm --network none -v "./infra/grader/submission/1/review_9_1_main.go.file:/app/1/game/main.go" --workdir /app/1/game grader:latest go test
+	//docker run --rm --network none -v "./infra/grader/submission/2/review_9_2_main.go.file:/app/2/client/main.go" --workdir /app/2/client grader:latest go test
 
 	volumePath = "./" + vPathHost + ":" + containerWorkdir + "/main.go"
 
@@ -85,10 +88,12 @@ func (w *Worker) DoJob(ctx context.Context, payload *dto.GraderPayload) error {
 	out, err := cmd.CombinedOutput()
 	switch {
 	case errors.Is(ctx.Err(), context.DeadlineExceeded):
-		logger.Z(ctx).Error(ctx, "docker runtime", "timeout")
+		logger.Z(ctx).Error(ctx, "docker runtime deadline", "timeout")
 		return ctx.Err()
 	case err != nil:
-		logger.Z(ctx).Error(ctx, "docker runtime", err.Error())
+		logger.Z(ctx).Error(ctx, "docker runtime", err.Error(), map[string]string{
+			"output": string(out),
+		})
 		return err
 	default:
 		logger.Z(ctx).Info(ctx, "docker run", string(out))

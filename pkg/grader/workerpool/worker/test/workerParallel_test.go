@@ -13,8 +13,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestWorker_DoJob(t *testing.T) {
-
+func TestWorkerParallel_DoJob(t *testing.T) {
+	t.Parallel()
 	// create and read config
 	appCfg, err := config.GetApplicationConfig()
 	if err != nil {
@@ -30,10 +30,9 @@ func TestWorker_DoJob(t *testing.T) {
 	}
 
 	// ctx
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx := context.Background()
 	// ctx add logger
 	ctx = logger.CtxWithLogger(ctx, z)
-	defer cancel()
 
 	// init file storage
 	fStorage, err := s3.NewFileStorage(ctx, &appCfg.GetConfig().FileStorage)
@@ -124,7 +123,9 @@ func TestWorker_DoJob(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			w := worker.NewWorker(tt.fields.fStorage)
 			err := w.DoJob(tt.args.ctx, tt.args.payload)
 			require.Equal(t, tt.wantErr, err != nil)
