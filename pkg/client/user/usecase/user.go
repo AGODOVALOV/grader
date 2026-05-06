@@ -421,7 +421,9 @@ func (s *UserService) CreateAndOutboxReviewTx(
 
 	payloadGrader := dtograder.GraderPayload{
 		UserID:   strconv.FormatInt(userID, 10),
+		TaskID:   strconv.FormatInt(taskNum, 10),
 		ReviewID: strconv.FormatInt(newReview.ID, 10),
+		EventID:  eventID.String(),
 		FileIDs: []dtograder.File{
 			{"label_" + filename,
 				filename},

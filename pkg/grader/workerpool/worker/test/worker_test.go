@@ -65,12 +65,13 @@ func TestWorker_DoJob(t *testing.T) {
 			args: args{
 				ctx: ctx,
 				payload: &dto.GraderPayload{
+					TaskID:   "1",
 					UserID:   "9",
 					ReviewID: "20",
 					FileIDs: []dto.File{
 						{
 							Label:    "label_",
-							FileName: "test.file",
+							FileName: "review_9_1_main.go",
 						},
 					},
 					ContainerName: appCfg.GetConfig().FileStorage.Bucket,
