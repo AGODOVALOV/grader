@@ -13,3 +13,12 @@ type File struct {
 	Label    string `json:"label"`
 	FileName string `json:"fileName"`
 }
+
+type GraderPayloadCallback struct {
+	UserID        string `json:"userId"`
+	TaskID        string `json:"taskId"`
+	ReviewID      string `json:"reviewId"`
+	EventID       string `json:"eventId"`
+	OutputMessage string `json:"errorMessage"`
+	ErrorText     string `json:"errorText"`
+}

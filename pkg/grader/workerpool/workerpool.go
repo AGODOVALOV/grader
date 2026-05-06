@@ -6,10 +6,13 @@ import (
 
 	"github.com/AGODOVALOV/grader/pkg/config/config"
 	"github.com/AGODOVALOV/grader/pkg/dto"
+	"github.com/AGODOVALOV/grader/pkg/grader/client"
 	graderconfig "github.com/AGODOVALOV/grader/pkg/grader/config"
 	"github.com/AGODOVALOV/grader/pkg/grader/workerpool/worker"
 	"github.com/AGODOVALOV/grader/pkg/logger"
 	"github.com/AGODOVALOV/grader/pkg/storage/s3"
+	"github.com/AGODOVALOV/grader/pkg/token"
+	tokenconfig "github.com/AGODOVALOV/grader/pkg/token/config"
 )
 
 type WorkerPool struct {
@@ -17,14 +20,21 @@ type WorkerPool struct {
 	Tasks  chan *dto.GraderPayload
 	wg     *sync.WaitGroup
 	worker *worker.Worker
+	token  token.Maker
 }
 
-func NewWorkerPool(cfg *config.Config, fStorage *s3.FileStorage) *WorkerPool {
+func NewWorkerPool(ctx context.Context, cfg *config.Config, fStorage *s3.FileStorage) *WorkerPool {
+	tokenMaker, err := token.NewJWTMaker((*tokenconfig.Config)(&cfg.Grader.Callback.JWT))
+	if err != nil {
+		logger.Z(ctx).Error(ctx, "init token maker", err.Error())
+	}
+
 	return &WorkerPool{
 		Tasks:  make(chan *dto.GraderPayload, cfg.Grader.Workers*20),
 		cfg:    &cfg.Grader,
 		wg:     &sync.WaitGroup{},
-		worker: worker.NewWorker(fStorage),
+		worker: worker.NewWorker(fStorage, client.NewClient(&cfg.Grader.Callback, tokenMaker)),
+		token:  tokenMaker,
 	}
 }
 

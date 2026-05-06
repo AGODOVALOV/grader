@@ -46,7 +46,7 @@ func main() {
 		})
 
 	// init file storage
-	fStorage, err := s3.NewFileStorage(ctx, appCfg.GetConfig().FileStorage)
+	fStorage, err := s3.NewFileStorage(ctx, &appCfg.GetConfig().FileStorage)
 	if err != nil {
 		z.Error(ctx, "init file storage", err.Error())
 		return
@@ -59,7 +59,7 @@ func main() {
 	}
 
 	// init grader processor
-	graderProc := grader.NewGrader(fStorage, tokenMaker, appCfg.GetConfig())
+	graderProc := grader.NewGrader(ctx, fStorage, tokenMaker, appCfg.GetConfig())
 
 	// init web server
 	srv, err := graderserver.NewGraderServer(ctx,

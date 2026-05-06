@@ -44,7 +44,7 @@ s3-minio:
   use-ssl: false
 
 grader:
-  url: https://localhost:8022/api/v1/grader
+  url: http://localhost:8022/api/v1/grader
   container: hw_checker
   workers: 3
   server:
@@ -54,6 +54,19 @@ grader:
     write-timeout: 10s
     idle-timeout: 60s
     shutdown-timeout: 5s
+  http-client:
+    callback-url: http://localhost:8080/api/v1/grader/callback
+    timeout: 5s
+    max-idle-conns: 50
+    idle-conn-timeout: 90s
+    task-delay: 20s
+    retry:
+      max-attempts: 3
+      backoff: 200ms
+      backoff-max: 2s
+    token:
+      secret: b7Fq2LxP9ZsWcR4mY8KjTnV1uH0eD5A3QwXr6BpUfMg=
+      duration: 2m
 
 message_queue:
   broker:
@@ -67,7 +80,7 @@ message_queue:
   messaging:
     channels:
       - name: grader
-        target: https://localhost:8021
+        target: http://localhost:8021
         api_path: /api/v1/grader
         rate_limiter:
           type: token_bucket

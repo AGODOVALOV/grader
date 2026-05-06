@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -10,17 +11,20 @@ import (
 	"time"
 
 	"github.com/AGODOVALOV/grader/pkg/dto"
+	"github.com/AGODOVALOV/grader/pkg/grader/client"
 	"github.com/AGODOVALOV/grader/pkg/logger"
 	"github.com/AGODOVALOV/grader/pkg/storage/s3"
 )
 
 type Worker struct {
-	fStorage *s3.FileStorage
+	fStorage       *s3.FileStorage
+	callBackClient *client.Client
 }
 
-func NewWorker(fStorage *s3.FileStorage) *Worker {
+func NewWorker(fStorage *s3.FileStorage, callBackClient *client.Client) *Worker {
 	return &Worker{
-		fStorage: fStorage,
+		fStorage:       fStorage,
+		callBackClient: callBackClient,
 	}
 }
 
@@ -66,7 +70,7 @@ func (w *Worker) DoJob(ctx context.Context, payload *dto.GraderPayload) error {
 	}
 
 	// start docker flow for tests files
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	runCtx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
 	//docker run --rm --network none -v "./infra/grader/submission/1/review_9_1_main.go.file:/app/1/game/main.go" --workdir /app/1/game grader:latest go test
@@ -74,7 +78,7 @@ func (w *Worker) DoJob(ctx context.Context, payload *dto.GraderPayload) error {
 
 	volumePath = "./" + vPathHost + ":" + containerWorkdir + "/main.go"
 
-	cmd := exec.CommandContext(ctx, "docker", "run",
+	cmd := exec.CommandContext(runCtx, "docker", "run",
 		"--rm",
 		"--network", "none",
 		"--memory", "256m",
@@ -86,22 +90,49 @@ func (w *Worker) DoJob(ctx context.Context, payload *dto.GraderPayload) error {
 	)
 
 	out, err := cmd.CombinedOutput()
-	switch {
-	case errors.Is(ctx.Err(), context.DeadlineExceeded):
-		logger.Z(ctx).Error(ctx, "docker runtime deadline", "timeout")
-		return ctx.Err()
-	case err != nil:
+	if err != nil {
 		logger.Z(ctx).Error(ctx, "docker runtime", err.Error(), map[string]string{
+			"user":   payload.UserID,
+			"task":   payload.TaskID,
+			"review": payload.ReviewID,
+			"event":  payload.EventID,
 			"output": string(out),
 		})
-		return err
-	default:
-		logger.Z(ctx).Info(ctx, "docker run", string(out))
+	}
+	callBackPayload := dto.GraderPayloadCallback{
+		UserID:        payload.UserID,
+		TaskID:        payload.TaskID,
+		ReviewID:      payload.ReviewID,
+		EventID:       payload.EventID,
+		OutputMessage: string(out),
+		ErrorText:     getErrText(err),
 	}
 
-	logger.Z(ctx).Info(ctx, "docker run result", fmt.Sprintf("test for %s", fName), map[string]string{
+	callBackPayloadBytes, err := json.Marshal(callBackPayload)
+	if err != nil {
+		logger.Z(ctx).Error(ctx, "json marshal", err.Error())
+		return err
+	}
+
+	logger.Z(ctx).Debug(ctx, "docker run result", fmt.Sprintf("test for %s", fName), map[string]string{
+		"result": string(out),
+	})
+
+	err = w.callBackClient.DoCallbackRequestWithRetry(ctx, callBackPayloadBytes)
+	if err != nil {
+		return err
+	}
+
+	logger.Z(ctx).Debug(ctx, "callback sent", fmt.Sprintf("test for %s", fName), map[string]string{
 		"result": string(out),
 	})
 
 	return nil
+}
+
+func getErrText(err error) string {
+	if err == nil {
+		return ""
+	}
+	return err.Error()
 }

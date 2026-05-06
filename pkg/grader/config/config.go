@@ -1,12 +1,17 @@
 package config
 
-import "time"
+import (
+	"time"
+
+	callbackconfig "github.com/AGODOVALOV/grader/pkg/grader/client/config"
+)
 
 type Config struct {
-	URL       string       `mapstructure:"url" validate:"required,url"`
-	Container string       `mapstructure:"container" validate:"required"`
-	Workers   int          `mapstructure:"workers" validate:"required,gte=1"`
-	Server    ServerConfig `mapstructure:"server" validate:"required"`
+	URL       string                `mapstructure:"url"         validate:"required,url"`
+	Container string                `mapstructure:"container"   validate:"required"`
+	Workers   int                   `mapstructure:"workers"     validate:"required,gte=1"`
+	Server    ServerConfig          `mapstructure:"server"      validate:"required"`
+	Callback  callbackconfig.Config `mapstructure:"http-client" validate:"required"`
 }
 
 type ServerConfig struct {

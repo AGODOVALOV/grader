@@ -2,14 +2,16 @@ package test_test
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/AGODOVALOV/grader/pkg/config"
 	"github.com/AGODOVALOV/grader/pkg/dto"
+	"github.com/AGODOVALOV/grader/pkg/grader/client"
 	"github.com/AGODOVALOV/grader/pkg/grader/workerpool/worker"
 	"github.com/AGODOVALOV/grader/pkg/logger"
 	"github.com/AGODOVALOV/grader/pkg/storage/s3"
+	"github.com/AGODOVALOV/grader/pkg/token"
+	tokenconfig "github.com/AGODOVALOV/grader/pkg/token/config"
 	"github.com/stretchr/testify/require"
 )
 
@@ -18,16 +20,24 @@ func TestWorkerParallel_DoJob(t *testing.T) {
 	// create and read config
 	appCfg, err := config.GetApplicationConfig()
 	if err != nil {
-		fmt.Println(err.Error())
+		t.Error(err)
 		return
 	}
 
 	// create logger
 	z, err := logger.NewAppLogger(appCfg.GetConfig().Log)
 	if err != nil {
-		fmt.Println(err)
+		t.Error(err)
 		return
 	}
+
+	tokenMaker, err := token.NewJWTMaker((*tokenconfig.Config)(&appCfg.GetConfig().Grader.Callback.JWT))
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	callbackClient := client.NewClient(&appCfg.GetConfig().Grader.Callback, tokenMaker)
 
 	// ctx
 	ctx := context.Background()
@@ -126,7 +136,7 @@ func TestWorkerParallel_DoJob(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			w := worker.NewWorker(tt.fields.fStorage)
+			w := worker.NewWorker(tt.fields.fStorage, callbackClient)
 			err := w.DoJob(tt.args.ctx, tt.args.payload)
 			require.Equal(t, tt.wantErr, err != nil)
 		})
