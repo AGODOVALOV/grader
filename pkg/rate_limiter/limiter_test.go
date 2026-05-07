@@ -1,10 +1,11 @@
-package rate_limiter
+package rate_limiter_test
 
 import (
 	"context"
 	"testing"
 	"time"
 
+	"github.com/AGODOVALOV/grader/pkg/rate_limiter"
 	"github.com/stretchr/testify/require"
 
 	"github.com/AGODOVALOV/grader/pkg/rate_limiter/config"
@@ -15,43 +16,43 @@ func TestFixedWindowLimiter_Allow(t *testing.T) {
 	defer cancel()
 
 	var (
-		limiter Limiter
+		limiter rate_limiter.Limiter
 		err     error
 	)
 
 	cfg := &config.Config{
 		MaxRequests: 5,
 		Interval:    1 * time.Second,
-		Type:        LimiterFixedWindow,
+		Type:        rate_limiter.LimiterFixedWindow,
 	}
 
 	t.Run("Allow Good", func(t *testing.T) {
-		limiter = NewRateLimiter(ctx, cfg)
+		limiter = rate_limiter.NewRateLimiter(ctx, cfg)
 		require.NoError(t, err)
 		for range 5 {
-			require.Equal(t, true, limiter.Allow())
+			require.True(t, limiter.Allow())
 		}
 	})
 
 	t.Run("Allow Bad", func(t *testing.T) {
-		limiter = NewRateLimiter(ctx, cfg)
+		limiter = rate_limiter.NewRateLimiter(ctx, cfg)
 		require.NoError(t, err)
 		for range 5 {
-			require.Equal(t, true, limiter.Allow())
+			require.True(t, limiter.Allow())
 		}
-		require.Equal(t, false, limiter.Allow())
+		require.False(t, limiter.Allow())
 	})
 
 	t.Run("Allow Bad Then True", func(t *testing.T) {
-		limiter = NewRateLimiter(ctx, cfg)
+		limiter = rate_limiter.NewRateLimiter(ctx, cfg)
 		require.NoError(t, err)
 		for range 5 {
-			require.Equal(t, true, limiter.Allow())
+			require.True(t, limiter.Allow())
 		}
-		require.Equal(t, false, limiter.Allow())
+		require.False(t, limiter.Allow())
 
 		time.Sleep(1 * time.Second)
-		require.Equal(t, true, limiter.Allow())
+		require.True(t, limiter.Allow())
 	})
 }
 
@@ -60,42 +61,42 @@ func TestTokenBucketLimiter_Allow(t *testing.T) {
 	defer cancel()
 
 	var (
-		limiter Limiter
+		limiter rate_limiter.Limiter
 		err     error
 	)
 
 	cfg := &config.Config{
 		MaxRequests: 5,
 		Interval:    1 * time.Second,
-		Type:        LimiterTokenBucket,
+		Type:        rate_limiter.LimiterTokenBucket,
 	}
 
 	t.Run("Allow Good", func(t *testing.T) {
-		limiter = NewRateLimiter(ctx, cfg)
+		limiter = rate_limiter.NewRateLimiter(ctx, cfg)
 		require.NoError(t, err)
 		for range 5 {
-			require.Equal(t, true, limiter.Allow())
+			require.True(t, limiter.Allow())
 		}
 	})
 
 	t.Run("Allow Bad", func(t *testing.T) {
-		limiter = NewRateLimiter(ctx, cfg)
+		limiter = rate_limiter.NewRateLimiter(ctx, cfg)
 		require.NoError(t, err)
 		for range 5 {
-			require.Equal(t, true, limiter.Allow())
+			require.True(t, limiter.Allow())
 		}
-		require.Equal(t, false, limiter.Allow())
+		require.False(t, limiter.Allow())
 	})
 
 	t.Run("Allow Bad Then True", func(t *testing.T) {
-		limiter = NewRateLimiter(ctx, cfg)
+		limiter = rate_limiter.NewRateLimiter(ctx, cfg)
 		require.NoError(t, err)
 		for range 5 {
-			require.Equal(t, true, limiter.Allow())
+			require.True(t, limiter.Allow())
 		}
-		require.Equal(t, false, limiter.Allow())
+		require.False(t, limiter.Allow())
 
 		time.Sleep(1 * time.Second)
-		require.Equal(t, true, limiter.Allow())
+		require.True(t, limiter.Allow())
 	})
 }

@@ -81,11 +81,11 @@ func UploadFile(
 	return nil
 }
 
+// DownloadFile downloads a file from a bucket on S3.
 func DownloadFile(ctx context.Context,
 	client *minio.Client,
 	name string,
 	bucket string) ([]byte, error) {
-
 	object, err := client.GetObject(ctx, bucket, name, minio.GetObjectOptions{})
 	if err != nil {
 		return nil, err

@@ -44,16 +44,12 @@ func NewClient(cfg *config.Config, tokenMaker token.Maker) *Client {
 
 func (c *Client) DoCallbackRequestWithRetry(ctx context.Context, payload []byte) error {
 	const op = "grader.client.http.DoCallbackRequestWithRetry"
-
-	req := &http.Request{}
-	resp := &http.Response{}
 	var (
 		dumpReq []byte
-		err     error
 	)
 
 	for attempt := 0; attempt <= c.cfg.Retry.MaxAttempts; attempt++ {
-		req, err = http.NewRequestWithContext(
+		req, err := http.NewRequestWithContext(
 			ctx,
 			http.MethodPost,
 			c.cfg.URL,
@@ -73,7 +69,7 @@ func (c *Client) DoCallbackRequestWithRetry(ctx context.Context, payload []byte)
 
 		dumpReq, _ = httputil.DumpRequest(req, false)
 
-		resp, err = c.Client.Do(req)
+		resp, err := c.Client.Do(req)
 
 		if err == nil && resp.StatusCode < 500 {
 			logger.Z(ctx).Debug(ctx, op, "success", map[string]string{
@@ -85,7 +81,7 @@ func (c *Client) DoCallbackRequestWithRetry(ctx context.Context, payload []byte)
 		}
 
 		if resp != nil {
-			err := resp.Body.Close()
+			err = resp.Body.Close()
 			if err != nil {
 				return err
 			}
@@ -109,7 +105,7 @@ func (c *Client) DoCallbackRequestWithRetry(ctx context.Context, payload []byte)
 		}
 	}
 
-	return err
+	return nil
 }
 
 func getErrText(err error) string {

@@ -65,8 +65,7 @@ func main() {
 	srv, err := graderserver.NewGraderServer(ctx,
 		appCfg.GetConfig(),
 		graderProc,
-		tokenMaker,
-		fStorage)
+		tokenMaker)
 	if err != nil {
 		z.Error(ctx, "create server", err.Error())
 		return
@@ -83,5 +82,4 @@ func main() {
 
 	//wait for all tasks to finish
 	graderProc.Handler.GraderService.WP.Wait()
-
 }

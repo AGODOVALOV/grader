@@ -61,6 +61,7 @@ func (fs *FileStorage) UploadFile(
 	return "", nil
 }
 
+// DownloadFile downloads a file from S3.
 func (fs *FileStorage) DownloadFile(
 	ctx context.Context,
 	objectName string) ([]byte, error) {

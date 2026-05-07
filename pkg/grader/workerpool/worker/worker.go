@@ -73,8 +73,8 @@ func (w *Worker) DoJob(ctx context.Context, payload *dto.GraderPayload) error {
 	runCtx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	//docker run --rm --network none -v "./infra/grader/submission/1/review_9_1_main.go.file:/app/1/game/main.go" --workdir /app/1/game grader:latest go test
-	//docker run --rm --network none -v "./infra/grader/submission/2/review_9_2_main.go.file:/app/2/client/main.go" --workdir /app/2/client grader:latest go test
+	// docker run --rm --network none -v "./infra/grader/submission/1/review_9_1_main.go.file:/app/1/game/main.go" --workdir /app/1/game grader:latest go test
+	// docker run --rm --network none -v "./infra/grader/submission/2/review_9_2_main.go.file:/app/2/client/main.go" --workdir /app/2/client grader:latest go test
 
 	volumePath = "./" + vPathHost + ":" + containerWorkdir + "/main.go"
 
@@ -89,8 +89,10 @@ func (w *Worker) DoJob(ctx context.Context, payload *dto.GraderPayload) error {
 		"go", "test",
 	)
 
+	pass := true
 	out, err := cmd.CombinedOutput()
 	if err != nil {
+		pass = false
 		logger.Z(ctx).Error(ctx, "docker runtime", err.Error(), map[string]string{
 			"user":   payload.UserID,
 			"task":   payload.TaskID,
@@ -104,6 +106,7 @@ func (w *Worker) DoJob(ctx context.Context, payload *dto.GraderPayload) error {
 		TaskID:        payload.TaskID,
 		ReviewID:      payload.ReviewID,
 		EventID:       payload.EventID,
+		Passed:        pass,
 		OutputMessage: string(out),
 		ErrorText:     getErrText(err),
 	}

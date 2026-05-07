@@ -1,3 +1,4 @@
+// Package token_bucket provides token bucket rate limiter.
 package token_bucket
 
 import (

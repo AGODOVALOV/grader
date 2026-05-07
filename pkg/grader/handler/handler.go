@@ -55,5 +55,4 @@ func (h *GraderHandler) Grade(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "request cancelled", http.StatusRequestTimeout)
 		return
 	}
-
 }

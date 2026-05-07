@@ -15,5 +15,5 @@ type Config struct {
 	WriteTimeout    time.Duration  `mapstructure:"write-timeout"    validate:"required,gt=0"`
 	IdleTimeout     time.Duration  `mapstructure:"idle-timeout"     validate:"required,gt=0"`
 	ShutdownTimeout time.Duration  `mapstructure:"shutdown-timeout" validate:"required,gt=0"`
-	RateLimiter     *config.Config `mapstructure:"rate_limiter"     validate:"required"`
+	RateLimiter     *config.Config `mapstructure:"rate-limiter"     validate:"required"`
 }

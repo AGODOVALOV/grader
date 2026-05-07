@@ -34,10 +34,11 @@ func AccessLogWithCtx(ctx context.Context, next http.Handler) http.Handler {
 
 //nolint:gochecknoglobals // static whitelist for auth middleware
 var noAuthUrls = map[string]struct{}{
-	"/user/login":    {},
-	"/user/register": {},
-	"/user/create":   {},
-	"/swagger":       {},
+	"/user/login":             {},
+	"/user/register":          {},
+	"/user/create":            {},
+	"/swagger":                {},
+	"/api/v1/grader/callback": {},
 }
 
 // Auth middleware.

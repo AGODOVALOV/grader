@@ -49,17 +49,14 @@ func (h *UserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 
 	userID, err := h.Service.CheckUserLogin(r.Context(), login, password)
 	if err != nil {
-		if errors.Is(err, common.ErrRecordNotFound) {
+		switch {
+		case errors.Is(err, common.ErrRecordNotFound):
 			http.Error(w, "User not found", http.StatusNotFound)
-			return
-		}
-
-		if errors.Is(err, common.ErrIncorrectPassword) {
+		case errors.Is(err, common.ErrIncorrectPassword):
 			http.Error(w, "Incorrect password", http.StatusUnauthorized)
-			return
+		default:
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
-
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 

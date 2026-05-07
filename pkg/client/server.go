@@ -19,6 +19,7 @@ import (
 	"github.com/AGODOVALOV/grader/pkg/rate_limiter"
 	"github.com/AGODOVALOV/grader/pkg/storage/s3"
 	"github.com/AGODOVALOV/grader/pkg/token"
+	tokenconfig "github.com/AGODOVALOV/grader/pkg/token/config"
 	"github.com/swaggo/http-swagger"
 )
 
@@ -42,7 +43,12 @@ func NewClientServer(ctx context.Context, cfg *config.Config, r *repo.Repo, fSto
 		return nil, err
 	}
 
-	usr := user.NewUser(tmpl, usecase.NewUserService(r, fStorage, tokenMaker))
+	tokenMakerCallBack, err := token.NewJWTMaker((*tokenconfig.Config)(&cfg.Grader.Callback.JWT))
+	if err != nil {
+		return nil, err
+	}
+
+	usr := user.NewUser(tmpl, usecase.NewUserService(r, fStorage, tokenMaker, tokenMakerCallBack))
 
 	// configure router
 	router := configureRouter(usr)
@@ -94,6 +100,7 @@ func configureRouter(u *user.User) *http.ServeMux {
 	router.HandleFunc("POST /user/login", u.Handler.LoginUser)
 
 	router.HandleFunc("POST /task/review", u.Handler.UploadTask)
+	router.HandleFunc("POST /api/v1/grader/callback", u.Handler.CallBack)
 
 	router.Handle("/swagger/", httpSwagger.WrapHandler)
 

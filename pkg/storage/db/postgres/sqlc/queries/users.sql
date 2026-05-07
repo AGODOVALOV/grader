@@ -82,10 +82,14 @@ select users.id,
        tasks.name as taskname,
        reviews.id as reviewid,
        reviews.status,
-       reviews.created_at
+       reviews.created_at,
+       outbox_reviews.last_error,
+       outbox_reviews.result_out
 from users
          left join reviews on users.id = reviews.userid
          left join tasks on reviews.task = tasks.id
+         left join outbox_reviews on reviews.id = outbox_reviews.reviewid
+    and outbox_reviews.userid = users.id
 where users.id = $1;
 
 -- name: GetReviewsAll :many
@@ -158,8 +162,23 @@ WHERE id = $1;
 
 -- name: MarkOutboxReviewRetry :exec
 UPDATE outbox_reviews
-SET attempts = attempts + 1,
+SET attempts      = attempts + 1,
     next_retry_at = NOW() + ($2 * INTERVAL '1 second'),
-    last_error = $3,
-    status = 'pending'
+    last_error    = $3,
+    status        = 'pending'
 WHERE id = $1;
+
+-- name: MarkOutboxReviewStatus :exec
+UPDATE outbox_reviews
+SET status     = $1,
+    last_error = $2,
+    result_out = $3
+WHERE reviewid = $4
+  AND userid = $5;
+
+-- name: MarkReviewStatus :exec
+UPDATE reviews
+SET status = $1
+WHERE id = $2
+  AND userid = $3
+  AND task = $4;

@@ -16,7 +16,6 @@ import (
 )
 
 func TestWorker_DoJob(t *testing.T) {
-
 	// create and read config
 	appCfg, err := config.GetApplicationConfig()
 	if err != nil {

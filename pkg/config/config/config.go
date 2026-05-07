@@ -29,5 +29,5 @@ type Config struct {
 
 	Grader graderconfig.Config `mapstructure:"grader" validate:"required"`
 
-	MsgQueue messagequeue.Config `mapstructure:"message_queue" validate:"required"`
+	MsgQueue messagequeue.Config `mapstructure:"message-queue" validate:"required"`
 }

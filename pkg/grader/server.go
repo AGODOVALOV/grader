@@ -10,7 +10,6 @@ import (
 	"github.com/AGODOVALOV/grader/pkg/grader/grader"
 	"github.com/AGODOVALOV/grader/pkg/grader/middleware"
 	"github.com/AGODOVALOV/grader/pkg/logger"
-	"github.com/AGODOVALOV/grader/pkg/storage/s3"
 	"github.com/AGODOVALOV/grader/pkg/token"
 )
 
@@ -25,9 +24,7 @@ type Server struct {
 func NewGraderServer(ctx context.Context,
 	cfg *config.Config,
 	graderProc *grader.Grader,
-	tokenMaker token.Maker,
-	fStorage *s3.FileStorage) (*Server, error) {
-
+	tokenMaker token.Maker) (*Server, error) {
 	// configure router
 	router := configureRouter(graderProc)
 

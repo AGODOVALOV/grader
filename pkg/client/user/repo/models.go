@@ -112,6 +112,7 @@ type OutboxReview struct {
 	MaxAttempts int32
 	NextRetryAt pgtype.Timestamptz
 	LastError   pgtype.Text
+	ResultOut   pgtype.Text
 }
 
 type Review struct {

@@ -107,7 +107,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
 }
 
 const getOutboxReviewsBatch = `-- name: GetOutboxReviewsBatch :many
-SELECT id, event_id, userid, reviewid, payload, status, created_at, processed_at, attempts, max_attempts, next_retry_at, last_error
+SELECT id, event_id, userid, reviewid, payload, status, created_at, processed_at, attempts, max_attempts, next_retry_at, last_error, result_out
 FROM outbox_reviews
 WHERE status = 'pending'
   AND attempts < max_attempts
@@ -138,6 +138,7 @@ func (q *Queries) GetOutboxReviewsBatch(ctx context.Context) ([]OutboxReview, er
 			&i.MaxAttempts,
 			&i.NextRetryAt,
 			&i.LastError,
+			&i.ResultOut,
 		); err != nil {
 			return nil, err
 		}
@@ -150,7 +151,7 @@ func (q *Queries) GetOutboxReviewsBatch(ctx context.Context) ([]OutboxReview, er
 }
 
 const getPendingOutboxReviews = `-- name: GetPendingOutboxReviews :many
-SELECT id, event_id, userid, reviewid, payload, status, created_at, processed_at, attempts, max_attempts, next_retry_at, last_error
+SELECT id, event_id, userid, reviewid, payload, status, created_at, processed_at, attempts, max_attempts, next_retry_at, last_error, result_out
 FROM outbox_reviews
 WHERE status = 'pending'
   AND (next_retry_at IS NULL OR next_retry_at <= NOW())
@@ -180,6 +181,7 @@ func (q *Queries) GetPendingOutboxReviews(ctx context.Context) ([]OutboxReview, 
 			&i.MaxAttempts,
 			&i.NextRetryAt,
 			&i.LastError,
+			&i.ResultOut,
 		); err != nil {
 			return nil, err
 		}
@@ -400,10 +402,14 @@ select users.id,
        tasks.name as taskname,
        reviews.id as reviewid,
        reviews.status,
-       reviews.created_at
+       reviews.created_at,
+       outbox_reviews.last_error,
+       outbox_reviews.result_out
 from users
          left join reviews on users.id = reviews.userid
          left join tasks on reviews.task = tasks.id
+         left join outbox_reviews on reviews.id = outbox_reviews.reviewid
+    and outbox_reviews.userid = users.id
 where users.id = $1
 `
 
@@ -416,6 +422,8 @@ type GetReviewsByUserIDRow struct {
 	Reviewid  pgtype.Int8
 	Status    NullReviewStatus
 	CreatedAt pgtype.Timestamptz
+	LastError pgtype.Text
+	ResultOut pgtype.Text
 }
 
 func (q *Queries) GetReviewsByUserID(ctx context.Context, id int64) ([]GetReviewsByUserIDRow, error) {
@@ -436,6 +444,8 @@ func (q *Queries) GetReviewsByUserID(ctx context.Context, id int64) ([]GetReview
 			&i.Reviewid,
 			&i.Status,
 			&i.CreatedAt,
+			&i.LastError,
+			&i.ResultOut,
 		); err != nil {
 			return nil, err
 		}
@@ -613,10 +623,10 @@ func (q *Queries) MarkOutboxReviewProcessingOne(ctx context.Context, id int64) e
 
 const markOutboxReviewRetry = `-- name: MarkOutboxReviewRetry :exec
 UPDATE outbox_reviews
-SET attempts = attempts + 1,
+SET attempts      = attempts + 1,
     next_retry_at = NOW() + ($2 * INTERVAL '1 second'),
-    last_error = $3,
-    status = 'pending'
+    last_error    = $3,
+    status        = 'pending'
 WHERE id = $1
 `
 
@@ -631,6 +641,34 @@ func (q *Queries) MarkOutboxReviewRetry(ctx context.Context, arg MarkOutboxRevie
 	return err
 }
 
+const markOutboxReviewStatus = `-- name: MarkOutboxReviewStatus :exec
+UPDATE outbox_reviews
+SET status     = $1,
+    last_error = $2,
+    result_out = $3
+WHERE reviewid = $4
+  AND userid = $5
+`
+
+type MarkOutboxReviewStatusParams struct {
+	Status    OutboxStatus
+	LastError pgtype.Text
+	ResultOut pgtype.Text
+	Reviewid  pgtype.Int8
+	Userid    pgtype.Int8
+}
+
+func (q *Queries) MarkOutboxReviewStatus(ctx context.Context, arg MarkOutboxReviewStatusParams) error {
+	_, err := q.db.Exec(ctx, markOutboxReviewStatus,
+		arg.Status,
+		arg.LastError,
+		arg.ResultOut,
+		arg.Reviewid,
+		arg.Userid,
+	)
+	return err
+}
+
 const markOutboxReviewsProcessingMany = `-- name: MarkOutboxReviewsProcessingMany :exec
 UPDATE outbox_reviews
 SET status = 'processing'
@@ -639,6 +677,31 @@ WHERE id = ANY ($1::bigint[])
 
 func (q *Queries) MarkOutboxReviewsProcessingMany(ctx context.Context, dollar_1 []int64) error {
 	_, err := q.db.Exec(ctx, markOutboxReviewsProcessingMany, dollar_1)
+	return err
+}
+
+const markReviewStatus = `-- name: MarkReviewStatus :exec
+UPDATE reviews
+SET status = $1
+WHERE id = $2
+  AND userid = $3
+  AND task = $4
+`
+
+type MarkReviewStatusParams struct {
+	Status NullReviewStatus
+	ID     int64
+	Userid pgtype.Int8
+	Task   int32
+}
+
+func (q *Queries) MarkReviewStatus(ctx context.Context, arg MarkReviewStatusParams) error {
+	_, err := q.db.Exec(ctx, markReviewStatus,
+		arg.Status,
+		arg.ID,
+		arg.Userid,
+		arg.Task,
+	)
 	return err
 }
 

@@ -1,3 +1,21 @@
+definitions:
+  dto.GraderPayloadCallback:
+    properties:
+      errorMessage:
+        type: string
+      errorText:
+        type: string
+      eventId:
+        type: string
+      passed:
+        type: boolean
+      reviewId:
+        type: string
+      taskId:
+        type: string
+      userId:
+        type: string
+    type: object
 info:
   contact: {}
 paths:
@@ -62,6 +80,42 @@ paths:
       summary: Update review status
       tags:
       - admin
+  /api/v1/grader/callback:
+    post:
+      consumes:
+      - application/json
+      description: Callback from grader to process the review request with result
+      parameters:
+      - description: Grader callback payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.GraderPayloadCallback'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Invalid callback payload
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Callback from grader
+      tags:
+      - callback
   /task/review:
     post:
       consumes:

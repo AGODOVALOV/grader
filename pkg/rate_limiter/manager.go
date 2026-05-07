@@ -10,12 +10,14 @@ import (
 	"github.com/AGODOVALOV/grader/pkg/rate_limiter/config"
 )
 
+// LimiterManager manages rate limiters.
 type LimiterManager struct {
 	limiters        map[string]Limiter
 	messagingConfig *messagingConfig.MessagingConfig
 	mu              *sync.RWMutex
 }
 
+// NewLimiterManager creates a new LimiterManager instance.
 func NewLimiterManager(cfg *messagingConfig.MessagingConfig) *LimiterManager {
 	return &LimiterManager{
 		limiters:        make(map[string]Limiter),
@@ -24,6 +26,7 @@ func NewLimiterManager(cfg *messagingConfig.MessagingConfig) *LimiterManager {
 	}
 }
 
+// Get returns a rate limiter for the given queue key.
 func (lm *LimiterManager) Get(ctx context.Context, queueKey string) Limiter {
 	lm.mu.RLock()
 	limiter, ok := lm.limiters[queueKey]

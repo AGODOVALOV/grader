@@ -24,26 +24,27 @@ func TestBucketLimiter_Allow(t *testing.T) {
 	t.Run("Allow Good", func(t *testing.T) {
 		limiter = NewTokenBucketLimiter(ctx, cfg)
 		for range 5 {
-			require.Equal(t, true, limiter.Allow())
+			require.True(t, limiter.Allow())
 		}
 	})
 
 	t.Run("Allow Bad", func(t *testing.T) {
 		limiter = NewTokenBucketLimiter(ctx, cfg)
 		for range 5 {
-			require.Equal(t, true, limiter.Allow())
+			require.True(t, limiter.Allow())
 		}
-		require.Equal(t, false, limiter.Allow())
+		require.False(t, limiter.Allow())
 	})
 
 	t.Run("Allow Bad Then True", func(t *testing.T) {
 		limiter = NewTokenBucketLimiter(ctx, cfg)
 		for range 5 {
-			require.Equal(t, true, limiter.Allow())
+			require.True(t, limiter.Allow())
 		}
-		require.Equal(t, false, limiter.Allow())
+
+		require.False(t, limiter.Allow())
 
 		time.Sleep(1 * time.Second)
-		require.Equal(t, true, limiter.Allow())
+		require.True(t, limiter.Allow())
 	})
 }

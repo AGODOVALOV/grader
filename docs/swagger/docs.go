@@ -107,6 +107,63 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/grader/callback": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Callback from grader to process the review request with result",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "callback"
+                ],
+                "summary": "Callback from grader",
+                "parameters": [
+                    {
+                        "description": "Grader callback payload",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.GraderPayloadCallback"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid callback payload",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/task/review": {
             "post": {
                 "description": "Uploads a file for a selected task and creates a new review request",
@@ -386,6 +443,34 @@ const docTemplate = `{
                             "type": "string"
                         }
                     }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "dto.GraderPayloadCallback": {
+            "type": "object",
+            "properties": {
+                "errorMessage": {
+                    "type": "string"
+                },
+                "errorText": {
+                    "type": "string"
+                },
+                "eventId": {
+                    "type": "string"
+                },
+                "passed": {
+                    "type": "boolean"
+                },
+                "reviewId": {
+                    "type": "string"
+                },
+                "taskId": {
+                    "type": "string"
+                },
+                "userId": {
+                    "type": "string"
                 }
             }
         }

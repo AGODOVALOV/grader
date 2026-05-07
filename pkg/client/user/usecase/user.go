@@ -26,17 +26,19 @@ import (
 
 // UserService provides methods for user-related operations.
 type UserService struct {
-	repo     *repo.Repo
-	fStorage *s3.FileStorage
-	token    token.Maker
+	repo          *repo.Repo
+	fStorage      *s3.FileStorage
+	token         token.Maker
+	tokenCallBack token.Maker
 }
 
 // NewUserService creates a new UserService instance.
-func NewUserService(r *repo.Repo, fStorage *s3.FileStorage, tkn token.Maker) *UserService {
+func NewUserService(r *repo.Repo, fStorage *s3.FileStorage, tkn token.Maker, tknCallBack token.Maker) *UserService {
 	return &UserService{
-		repo:     r,
-		fStorage: fStorage,
-		token:    tkn,
+		repo:          r,
+		fStorage:      fStorage,
+		token:         tkn,
+		tokenCallBack: tknCallBack,
 	}
 }
 
@@ -178,14 +180,14 @@ func (s *UserService) GetReviewsByUserID(ctx context.Context, userID int64) (*dt
 		if v.Reviewid.Int64 == 0 && len(data) == 1 {
 			msg = "You don't have any submitted review assignments yet."
 		} else {
-			msg = fmt.Sprintf("message for task - %s", v.Taskname.String)
+			msg = fmt.Sprintf("result out for task - %v\n", v.ResultOut.String) + " " + v.LastError.String
 		}
 
 		result.Tasks = append(result.Tasks, dto.TaskData{
 			ID:        int(v.Reviewid.Int64),
 			Title:     v.Taskname.String,
 			Status:    string(v.Status.ReviewStatus),
-			Message:   msg, // fmt.Sprintf("message for task - %s", v.Taskname.String),
+			Message:   msg,
 			UpdatedAt: v.CreatedAt.Time.Format(time.RFC3339),
 		})
 	}
@@ -392,7 +394,6 @@ func (s *UserService) CreateAndOutboxReviewTx(
 	filename string,
 	eventID *uuid.UUID,
 ) error {
-
 	tx, err := s.repo.DB.Pool.Begin(ctx)
 	if err != nil {
 		return err
@@ -471,5 +472,96 @@ func (s *UserService) CreateAndOutboxReviewTx(
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func (s *UserService) VerifyTokenCallBackToken(rawToken string) (*token.Payload, error) {
+	payload, err := s.tokenCallBack.VerifyToken(rawToken)
+	if err != nil {
+		return nil, err
+	}
+	return payload, nil
+}
+
+func (s *UserService) ProcessGraderCallback(ctx context.Context, payload *dtograder.GraderPayloadCallback) error {
+	var reviewStatusNew string
+
+	tx, err := s.repo.DB.Pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+
+	if payload.Passed {
+		reviewStatusNew = "done"
+	} else {
+		reviewStatusNew = "failed"
+	}
+
+	qtx := s.repo.Queries.WithTx(tx)
+
+	reviewID, err := strconv.ParseInt(payload.ReviewID, 10, 64)
+	if err != nil {
+		return err
+	}
+
+	userID, err := strconv.ParseInt(payload.UserID, 10, 64)
+	if err != nil {
+		return err
+	}
+
+	taskID, err := strconv.ParseInt(payload.TaskID, 10, 64)
+
+	err = qtx.MarkOutboxReviewStatus(ctx, repo.MarkOutboxReviewStatusParams{
+		Status: repo.OutboxStatus(reviewStatusNew),
+		LastError: pgtype.Text{
+			String: payload.ErrorText,
+			Valid:  true,
+		},
+		ResultOut: pgtype.Text{
+			String: payload.OutputMessage,
+			Valid:  true,
+		},
+		Reviewid: pgtype.Int8{
+			Int64: reviewID,
+			Valid: true,
+		},
+		Userid: pgtype.Int8{
+			Int64: userID,
+			Valid: true,
+		},
+	})
+	if err != nil {
+		err := tx.Rollback(ctx)
+		if err != nil {
+			return err
+		}
+		return err
+	}
+
+	err = qtx.MarkReviewStatus(ctx, repo.MarkReviewStatusParams{
+		Status: repo.NullReviewStatus{
+			ReviewStatus: repo.ReviewStatus(reviewStatusNew),
+			Valid:        true,
+		},
+		ID: reviewID,
+		Userid: pgtype.Int8{
+			Int64: userID,
+			Valid: true,
+		},
+		Task: int32(taskID),
+	})
+	if err != nil {
+		err := tx.Rollback(ctx)
+		if err != nil {
+			return err
+		}
+		return err
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
