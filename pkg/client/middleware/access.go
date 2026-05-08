@@ -74,6 +74,12 @@ func Auth(tokenMaker token.Maker, next http.Handler) http.Handler {
 
 func GlobalRateLimit(limiter Limiter, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		if r.URL.Path != "/task/review" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		if !limiter.Allow() {
 			w.Header().Set("Retry-After", strconv.Itoa(1))
 			http.Error(w, "too many requests", http.StatusTooManyRequests)
