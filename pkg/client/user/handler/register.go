@@ -1,10 +1,7 @@
 package handler
 
 import (
-	"fmt"
 	"net/http"
-
-	"github.com/AGODOVALOV/grader/pkg/logger"
 )
 
 // Register godoc
@@ -19,7 +16,7 @@ import (
 func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 	err := h.template.ExecuteTemplate(w, "create.html", nil)
 	if err != nil {
-		logger.Z(r.Context()).Error(r.Context(), "render register page", err.Error())
-		fmt.Println(err)
+		logErrorRequestWithDump(r, err)
 	}
+	return
 }

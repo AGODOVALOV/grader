@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
@@ -29,6 +30,7 @@ func (h *UserHandler) CallBack(w http.ResponseWriter, r *http.Request) {
 	authHeader := r.Header.Get("Authorization")
 
 	if !strings.HasPrefix(authHeader, bearerPrefix) {
+		logErrorRequestWithDump(r, errors.New("unauthorized request"))
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -37,6 +39,7 @@ func (h *UserHandler) CallBack(w http.ResponseWriter, r *http.Request) {
 
 	_, err := h.Service.VerifyTokenCallBackToken(rawToken)
 	if err != nil {
+		logErrorRequestWithDump(r, err)
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -50,12 +53,14 @@ func (h *UserHandler) CallBack(w http.ResponseWriter, r *http.Request) {
 
 	var callbackPayload dto.GraderPayloadCallback
 	if err := json.NewDecoder(r.Body).Decode(&callbackPayload); err != nil {
+		logErrorRequestWithDump(r, err)
 		http.Error(w, "invalid callback payload", http.StatusBadRequest)
 		return
 	}
 
 	err = h.Service.ProcessGraderCallback(r.Context(), &callbackPayload)
 	if err != nil {
+		writeHTTPError(r, w, err)
 		http.Error(w, "failed to process callback", http.StatusInternalServerError)
 		return
 	}

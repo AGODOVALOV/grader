@@ -2,6 +2,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/AGODOVALOV/grader/pkg/client/session"
@@ -23,18 +24,20 @@ import (
 func (h *UserHandler) Account(w http.ResponseWriter, r *http.Request) {
 	currSession, ok := r.Context().Value(session.SessionKey).(session.Session)
 	if !ok {
+		logErrorRequestWithDump(r, errors.New("session not found"))
 		http.Error(w, "session not found", http.StatusUnauthorized)
 		return
 	}
 
 	data, err := h.Service.GetReviewsByUserID(r.Context(), currSession.UserID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		writeHTTPError(r, w, err)
 		return
 	}
 
 	err = h.template.ExecuteTemplate(w, "account.html", data)
 	if err != nil {
+		logErrorRequestWithDump(r, err)
 		logger.Z(r.Context()).Error(r.Context(), "render account page", err.Error())
 		return
 	}

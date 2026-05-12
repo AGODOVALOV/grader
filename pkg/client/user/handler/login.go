@@ -22,11 +22,12 @@ type ErrorResponse struct {
 // @Success 200 {string} string "HTML page"
 // @Failure 500 {string} string "Internal server error"
 // @Router /user/login [get].
-func (h *UserHandler) Login(w http.ResponseWriter, _ *http.Request) {
+func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	err := h.template.ExecuteTemplate(w, "login.html", nil)
 	if err != nil {
-		fmt.Println(err)
+		logErrorRequestWithDump(r, err)
 	}
+	return
 }
 
 // LoginUser godoc
@@ -57,18 +58,20 @@ func (h *UserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 		default:
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
+		logErrorRequestWithDump(r, err)
 		return
 	}
 
 	isAdmin, err := h.Service.CheckUserIsAdminByLogin(r.Context(), login)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeHTTPError(r, w, err)
 		return
 	}
 
 	// create token
 	jwtToken, payload, err := h.Service.GetNewToken(userID, login)
 	if err != nil {
+		logErrorRequestWithDump(r, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

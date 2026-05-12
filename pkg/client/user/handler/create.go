@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/AGODOVALOV/grader/pkg/common"
@@ -27,6 +28,7 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	confirmPassword := r.FormValue("confirm_password")
 
 	if password != confirmPassword {
+		logErrorRequestWithDump(r, errors.New("passwords do not match"))
 		http.Error(w, "Passwords do not match", http.StatusBadRequest)
 		return
 	}

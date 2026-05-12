@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -26,14 +27,18 @@ func (h *UserHandler) Admin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	isAdmin, err := h.Service.CheckUserIsAdminByUserID(r.Context(), currSession.UserID)
-	if err != nil || !isAdmin {
+	if err != nil {
+		writeHTTPError(r, w, err)
+	}
+
+	if !isAdmin {
 		http.Error(w, "not admin", http.StatusUnauthorized)
 		return
 	}
 
 	data, err := h.Service.GetReviews(r.Context())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeHTTPError(r, w, err)
 		return
 	}
 
@@ -60,12 +65,18 @@ func (h *UserHandler) Admin(w http.ResponseWriter, r *http.Request) {
 func (h *UserHandler) UpdateReviewAdmin(w http.ResponseWriter, r *http.Request) {
 	currSession, ok := r.Context().Value(session.SessionKey).(session.Session)
 	if !ok {
+		logErrorRequestWithDump(r, errors.New("session not found"))
 		http.Error(w, "session not found", http.StatusUnauthorized)
 		return
 	}
 
 	isAdmin, err := h.Service.CheckUserIsAdminByUserID(r.Context(), currSession.UserID)
-	if err != nil || !isAdmin {
+	if err != nil {
+		writeHTTPError(r, w, err)
+	}
+
+	if !isAdmin {
+		logErrorRequestWithDump(r, errors.New("not admin"))
 		http.Error(w, "not admin", http.StatusUnauthorized)
 		return
 	}
@@ -75,13 +86,14 @@ func (h *UserHandler) UpdateReviewAdmin(w http.ResponseWriter, r *http.Request) 
 
 	reviewID, err := strconv.Atoi(reviewIDstr)
 	if err != nil {
+		logErrorRequestWithDump(r, err)
 		http.Error(w, "reviewID is not a number", http.StatusBadRequest)
 		return
 	}
 
 	err = h.Service.UpdateReviewStatus(r.Context(), int64(reviewID), status)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeHTTPError(r, w, err)
 		return
 	}
 
