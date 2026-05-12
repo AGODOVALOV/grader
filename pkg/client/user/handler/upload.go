@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/AGODOVALOV/grader/pkg/client/session"
+	"github.com/AGODOVALOV/grader/pkg/client/user/usecase"
 	"github.com/AGODOVALOV/grader/pkg/logger"
 	"github.com/google/uuid"
 )
@@ -52,6 +53,26 @@ func (h *UserHandler) UploadTask(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		logErrorRequestWithDump(r, errors.New("request error"))
 		http.Error(w, "request error", http.StatusBadRequest)
+		return
+	}
+
+	//file validation name(taskNumber) + body
+	err = h.Service.ValidateUploadFile(r.Context(), taskNum, file, header)
+	if err != nil {
+		switch {
+		case errors.Is(err, usecase.ErrInvalidUploadFileName):
+			http.Error(w, "invalid upload file name", http.StatusBadRequest)
+		case errors.Is(err, usecase.ErrUploadFileTooLarge):
+			http.Error(w, "upload file is too large", http.StatusBadRequest)
+		case errors.Is(err, usecase.ErrEmptyUploadFile):
+			http.Error(w, "file is empty", http.StatusBadRequest)
+		case errors.Is(err, usecase.ErrInvalidGoFile):
+			http.Error(w, "invalid Go file", http.StatusBadRequest)
+		case errors.Is(err, usecase.ErrInvalidGoPackage):
+			http.Error(w, "invalid Go package", http.StatusBadRequest)
+		default:
+			writeHTTPError(r, w, err)
+		}
 		return
 	}
 

@@ -6,10 +6,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"go/parser"
+	"io"
 	"math"
 	"mime/multipart"
+	"path/filepath"
 	"strconv"
 	"time"
+
+	"go/token"
 
 	"github.com/AGODOVALOV/grader/pkg/client/user/dto"
 	"github.com/AGODOVALOV/grader/pkg/client/user/repo"
@@ -18,22 +23,35 @@ import (
 	"github.com/AGODOVALOV/grader/pkg/logger"
 	"github.com/AGODOVALOV/grader/pkg/queue/config"
 	"github.com/AGODOVALOV/grader/pkg/storage/s3"
-	"github.com/AGODOVALOV/grader/pkg/token"
+	jwttoken "github.com/AGODOVALOV/grader/pkg/token"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/streadway/amqp"
+)
+
+const (
+	maxUploadFileSize = 1 << 20 // 1 MB
+	defaultFileName   = "main.go"
+)
+
+var (
+	ErrInvalidUploadFileName = errors.New("file name must be main.go")
+	ErrUploadFileTooLarge    = errors.New("file is too large")
+	ErrEmptyUploadFile       = errors.New("file is empty")
+	ErrInvalidGoFile         = errors.New("file must contain valid Go code")
+	ErrInvalidGoPackage      = errors.New("file must use package main")
 )
 
 // UserService provides methods for user-related operations.
 type UserService struct {
 	repo          *repo.Repo
 	fStorage      *s3.FileStorage
-	token         token.Maker
-	tokenCallBack token.Maker
+	token         jwttoken.Maker
+	tokenCallBack jwttoken.Maker
 }
 
 // NewUserService creates a new UserService instance.
-func NewUserService(r *repo.Repo, fStorage *s3.FileStorage, tkn token.Maker, tknCallBack token.Maker) *UserService {
+func NewUserService(r *repo.Repo, fStorage *s3.FileStorage, tkn jwttoken.Maker, tknCallBack jwttoken.Maker) *UserService {
 	return &UserService{
 		repo:          r,
 		fStorage:      fStorage,
@@ -100,7 +118,7 @@ func (s *UserService) CheckUserIsAdminByUserID(ctx context.Context, id int64) (b
 }
 
 // GetNewToken generates a new JWT token for the user.
-func (s *UserService) GetNewToken(userID int64, login string) (string, *token.Payload, error) {
+func (s *UserService) GetNewToken(userID int64, login string) (string, *jwttoken.Payload, error) {
 	jwtToken, payload, err := s.token.CreateToken(userID, login)
 	if err != nil {
 		return "", nil, err
@@ -475,7 +493,7 @@ func (s *UserService) CreateAndOutboxReviewTx(
 	return nil
 }
 
-func (s *UserService) VerifyTokenCallBackToken(rawToken string) (*token.Payload, error) {
+func (s *UserService) VerifyTokenCallBackToken(rawToken string) (*jwttoken.Payload, error) {
 	payload, err := s.tokenCallBack.VerifyToken(rawToken)
 	if err != nil {
 		return nil, err
@@ -561,6 +579,54 @@ func (s *UserService) ProcessGraderCallback(ctx context.Context, payload *dtogra
 	err = tx.Commit(ctx)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (s *UserService) ValidateUploadFile(ctx context.Context, id int64, file multipart.File, header *multipart.FileHeader) error {
+	_, err := s.repo.Queries.GetTaskNumberByID(ctx, int32(id))
+	if err != nil {
+		return err
+	}
+
+	if filepath.Base(header.Filename) != defaultFileName {
+		return ErrInvalidUploadFileName
+	}
+
+	if header.Size <= 0 {
+		return ErrEmptyUploadFile
+	}
+
+	if header.Size > maxUploadFileSize {
+		return ErrUploadFileTooLarge
+	}
+
+	if err := validateGoSourceFile(file); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func validateGoSourceFile(file multipart.File) error {
+	content, err := io.ReadAll(file)
+	if err != nil {
+		return err
+	}
+
+	if _, err = file.Seek(0, io.SeekStart); err != nil {
+		return err
+	}
+
+	fileSet := token.NewFileSet()
+	parsedFile, err := parser.ParseFile(fileSet, defaultFileName, content, parser.AllErrors)
+	if err != nil {
+		return ErrInvalidGoFile
+	}
+
+	if parsedFile.Name == nil || parsedFile.Name.Name != "main" {
+		return ErrInvalidGoPackage
 	}
 
 	return nil

@@ -182,3 +182,8 @@ SET status = $1
 WHERE id = $2
   AND userid = $3
   AND task = $4;
+
+-- name: GetTaskNumberByID :one
+SELECT id, name
+from tasks
+where id = $1;

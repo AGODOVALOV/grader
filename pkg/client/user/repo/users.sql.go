@@ -457,6 +457,19 @@ func (q *Queries) GetReviewsByUserID(ctx context.Context, id int64) ([]GetReview
 	return items, nil
 }
 
+const getTaskNumberByID = `-- name: GetTaskNumberByID :one
+SELECT id, name
+from tasks
+where id = $1
+`
+
+func (q *Queries) GetTaskNumberByID(ctx context.Context, id int32) (Task, error) {
+	row := q.db.QueryRow(ctx, getTaskNumberByID, id)
+	var i Task
+	err := row.Scan(&i.ID, &i.Name)
+	return i, err
+}
+
 const getUserByID = `-- name: GetUserByID :one
 SELECT id, login, name, password
 FROM users
