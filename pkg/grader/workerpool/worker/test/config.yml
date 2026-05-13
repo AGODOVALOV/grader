@@ -13,9 +13,9 @@ web-server:
   write-timeout: 10s
   idle-timeout: 60s
   shutdown-timeout: 5s
-  rate_limiter:
+  rate-limiter:
     type: fixed_window
-    max_requests: 10
+    max-requests: 10
     interval: 1s
 
 token:
@@ -65,24 +65,24 @@ grader:
       backoff: 200ms
       backoff-max: 2s
     token:
-      secret: 3z9KfP8vQwX2mLr7TnY5uB1sD4eH6jA0cVxRkUqWZpM=
-      duration: 40m
+      secret: b7Fq2LxP9ZsWcR4mY8KjTnV1uH0eD5A3QwXr6BpUfMg=
+      duration: 2m
 
-message_queue:
+message-queue:
   broker:
     active: rabbit
     rabbit:
       url: amqp://guest:guest@localhost:5672/
-      exchange_type: direct
+      exchange-type: direct
       durable: true
       prefetch: 20
       auto_declare: true
   messaging:
     channels:
       - name: grader
-        target: https://localhost:8021
-        api_path: /api/v1/grader
-        rate_limiter:
+        target: http://localhost:8021
+        api-path: /api/v1/grader
+        rate-limiter:
           type: token_bucket
-          max_requests: 100
+          max-requests: 100
           interval: 1s

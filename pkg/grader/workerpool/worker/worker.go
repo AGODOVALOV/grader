@@ -39,7 +39,8 @@ func (w *Worker) DoJob(ctx context.Context, payload *dto.GraderPayload) error {
 		return errors.New("no files provided")
 	}
 
-	fName := payload.FileIDs[0].FileName
+	// avoid path traversal
+	fName := filepath.Base(payload.FileIDs[0].FileName)
 
 	// get file from S3
 	fileData, err := w.fStorage.DownloadFile(ctx, fName)
@@ -47,7 +48,7 @@ func (w *Worker) DoJob(ctx context.Context, payload *dto.GraderPayload) error {
 		return err
 	}
 
-	fName = fName + ".file"
+	fName = fName + ".tst"
 
 	//save files to local submission storage
 	switch payload.TaskID {
@@ -67,7 +68,23 @@ func (w *Worker) DoJob(ctx context.Context, payload *dto.GraderPayload) error {
 			logger.Z(ctx).Error(ctx, "write file", err.Error())
 			return err
 		}
+	default:
+		return errors.New("unknown task id")
 	}
+
+	// delete local after docker run
+	defer func() {
+		err := os.Remove(vPathHost)
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			logger.Z(ctx).Error(ctx, "delete file", err.Error(), map[string]string{
+				"path":   vPathHost,
+				"user":   payload.UserID,
+				"task":   payload.TaskID,
+				"review": payload.ReviewID,
+				"event":  payload.EventID,
+			})
+		}
+	}()
 
 	// start docker flow for tests files
 	runCtx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
