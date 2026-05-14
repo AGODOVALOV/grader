@@ -60,6 +60,7 @@ func NewClientServer(ctx context.Context, cfg *config.Config, r *repo.Repo, fSto
 	handlerMux := middleware.GlobalRateLimit(limiter, router)
 	handlerMux = middleware.AccessLogWithCtx(ctx, handlerMux)
 	handlerMux = middleware.Auth(tokenMaker, handlerMux)
+	handlerMux = middleware.CSRF(handlerMux)
 
 	srv := &http.Server{
 		Addr:         net.JoinHostPort(cfg.WebServer.Host, strconv.Itoa(cfg.WebServer.Port)),

@@ -12,6 +12,7 @@
 <div class="container mt-5">
     <h1>Grader login</h1>
     <form method="POST" action="/user/login">
+        <input type="hidden" name="_csrf" id="csrf-token">
         <div class="form-group">
             <label for="login">Login</label>
             <input type="text" class="form-control" name="login" id="login" value="">
@@ -23,6 +24,16 @@
         <button type="submit" class="btn btn-primary">Login</button>
         <a href="/user/register" class="btn btn-primary">Register</a>
     </form>
+    <script>
+        function getCookie(name) {
+            return document.cookie
+                .split("; ")
+                .find(row => row.startsWith(name + "="))
+                ?.split("=")[1];
+        }
+
+        document.getElementById("csrf-token").value = getCookie("csrf_token") || "";
+    </script>
 </div>
 </body>
 </html>

@@ -20,7 +20,8 @@ type AccountPageData struct {
 
 // AdminReviewData represents one review row for the admin panel.
 type AdminReviewData struct {
-	ID        int64
+	ReviewID  int64
+	UserID    int64
 	UserLogin string
 	TaskTitle string
 	Status    string

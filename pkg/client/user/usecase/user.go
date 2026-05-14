@@ -229,7 +229,8 @@ func (s *UserService) GetReviews(ctx context.Context) (*dto.AdminReviewsPageData
 	for i := range data {
 		v := &data[i]
 		result.Reviews = append(result.Reviews, dto.AdminReviewData{
-			ID:        v.ID,
+			ReviewID:  v.Reviewid.Int64,
+			UserID:    v.ID,
 			UserLogin: v.Login,
 			FileName:  v.Name,
 			TaskTitle: v.Taskname.String,

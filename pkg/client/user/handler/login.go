@@ -82,7 +82,7 @@ func (h *UserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 		Value:    jwtToken,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   false,
+		Secure:   r.TLS != nil,
 		SameSite: http.SameSiteLaxMode,
 		Expires:  payload.ExpiredAt,
 	})

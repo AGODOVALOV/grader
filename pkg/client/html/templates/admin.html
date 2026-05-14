@@ -13,9 +13,10 @@
     <table class="table table-striped mt-4">
         <thead>
         <tr>
-            <th>ID</th>
-            <th>User</th>
-            <th>Task</th>
+            <th>ReviewID</th>
+            <th>UserID</th>
+            <th>UserLogin</th>
+            <th>TaskNum</th>
             <th>Status</th>
             <th>Created</th>
             <th>Updated</th>
@@ -25,7 +26,8 @@
         <tbody>
         {{range .Reviews}}
         <tr>
-            <td>{{.ID}}</td>
+            <td>{{.ReviewID}}</td>
+            <td>{{.UserID}}</td>
             <td>{{.UserLogin}}</td>
             <td>{{.TaskTitle}}</td>
             <td>{{.Status}}</td>
@@ -33,7 +35,8 @@
             <td>{{.UpdatedAt}}</td>
             <td>
                 <form method="POST" action="/admin/review/update" class="form-inline">
-                    <input type="hidden" name="reviewID" value="{{.ID}}">
+                    <input type="hidden" name="_csrf" class="csrf-token">
+                    <input type="hidden" name="reviewID" value="{{.ReviewID}}">
                     <select name="status" class="form-control form-control-sm mr-2">
                         <option value="pending">pending</option>
                         <option value="processing">processing</option>
@@ -47,6 +50,20 @@
         {{end}}
         </tbody>
     </table>
+    <script>
+        function getCookie(name) {
+            return document.cookie
+                .split("; ")
+                .find(row => row.startsWith(name + "="))
+                ?.split("=")[1];
+        }
+
+        const csrfToken = getCookie("csrf_token") || "";
+
+        document.querySelectorAll(".csrf-token").forEach(input => {
+            input.value = csrfToken;
+        });
+    </script>
 </div>
 </body>
 </html>
