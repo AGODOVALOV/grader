@@ -52,8 +52,10 @@ func (h *UserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, common.ErrRecordNotFound):
+			h.MetricsCollector.Metrics.LoginAttemptsTotal.WithLabelValues("invalid_credentials").Inc()
 			http.Error(w, "User not found", http.StatusNotFound)
 		case errors.Is(err, common.ErrIncorrectPassword):
+			h.MetricsCollector.Metrics.LoginAttemptsTotal.WithLabelValues("invalid_credentials").Inc()
 			http.Error(w, "Incorrect password", http.StatusUnauthorized)
 		default:
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -71,6 +73,7 @@ func (h *UserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 	// create token
 	jwtToken, payload, err := h.Service.GetNewToken(userID, login)
 	if err != nil {
+		h.MetricsCollector.Metrics.LoginAttemptsTotal.WithLabelValues("token_error").Inc()
 		logErrorRequestWithDump(r, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -91,6 +94,8 @@ func (h *UserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/admin", http.StatusFound)
 		return
 	}
+
+	h.MetricsCollector.Metrics.LoginAttemptsTotal.WithLabelValues("success").Inc()
 
 	http.Redirect(w, r, fmt.Sprintf("/user/account/%d", userID), http.StatusFound)
 }

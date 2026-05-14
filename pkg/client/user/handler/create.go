@@ -28,6 +28,7 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	confirmPassword := r.FormValue("confirm_password")
 
 	if password != confirmPassword {
+		h.MetricsCollector.Metrics.RegisterAttemptsTotal.WithLabelValues("password_mismatch").Inc()
 		logErrorRequestWithDump(r, errors.New("passwords do not match"))
 		http.Error(w, "Passwords do not match", http.StatusBadRequest)
 		return
@@ -41,7 +42,19 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 
 	err = h.Service.CreateUser(r.Context(), login, name, hashedPassword)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		mappedErr := mapDBError(err)
+
+		switch {
+		case errors.Is(mappedErr, ErrDuplicate):
+			h.MetricsCollector.Metrics.RegisterAttemptsTotal.WithLabelValues("duplicate").Inc()
+			http.Error(w, "user already exists", http.StatusBadRequest)
+		case errors.Is(mappedErr, ErrDatabaseError), errors.Is(mappedErr, ErrDatabaseConnectionError):
+			h.MetricsCollector.Metrics.RegisterAttemptsTotal.WithLabelValues("db_error").Inc()
+			http.Error(w, "database error", http.StatusInternalServerError)
+		default:
+			h.MetricsCollector.Metrics.RegisterAttemptsTotal.WithLabelValues("internal_error").Inc()
+			http.Error(w, "internal error", http.StatusInternalServerError)
+		}
 		return
 	}
 

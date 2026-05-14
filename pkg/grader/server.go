@@ -64,5 +64,6 @@ func (s *Server) ListenAndServe(ctx context.Context) {
 func configureRouter(g *grader.Grader) *http.ServeMux {
 	router := http.NewServeMux()
 	router.HandleFunc("POST /api/v1/grader", g.Handler.Grade)
+	router.Handle("/metrics/", g.Handler.MetricsCollector.Handler.Metrics)
 	return router
 }

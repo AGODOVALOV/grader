@@ -10,6 +10,7 @@ import (
 	"github.com/AGODOVALOV/grader/pkg/config"
 	graderserver "github.com/AGODOVALOV/grader/pkg/grader"
 	"github.com/AGODOVALOV/grader/pkg/grader/grader"
+	"github.com/AGODOVALOV/grader/pkg/grader/metrics"
 	"github.com/AGODOVALOV/grader/pkg/logger"
 	"github.com/AGODOVALOV/grader/pkg/storage/s3"
 	"github.com/AGODOVALOV/grader/pkg/token"
@@ -58,8 +59,11 @@ func main() {
 		return
 	}
 
+	//init metrics collector
+	metricsCollector := metrics.NewCollector(ctx)
+
 	// init grader processor
-	graderProc := grader.NewGrader(ctx, fStorage, tokenMaker, appCfg.GetConfig())
+	graderProc := grader.NewGrader(ctx, fStorage, tokenMaker, appCfg.GetConfig(), metricsCollector)
 
 	// init web server
 	srv, err := graderserver.NewGraderServer(ctx,

@@ -39,6 +39,7 @@ var noAuthUrls = map[string]struct{}{
 	"/user/create":            {},
 	"/swagger":                {},
 	"/api/v1/grader/callback": {},
+	"/metrics/":               {},
 }
 
 // Auth middleware.

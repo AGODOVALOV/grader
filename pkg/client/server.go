@@ -10,6 +10,7 @@ import (
 	"strconv"
 
 	_ "github.com/AGODOVALOV/grader/docs/swagger" // required to register generated Swagger docs via init()
+	"github.com/AGODOVALOV/grader/pkg/client/metrics"
 	"github.com/AGODOVALOV/grader/pkg/client/middleware"
 	"github.com/AGODOVALOV/grader/pkg/client/user"
 	"github.com/AGODOVALOV/grader/pkg/client/user/repo"
@@ -32,10 +33,17 @@ type Server struct {
 	User        *user.User
 	token       token.Maker
 	rateLimiter rate_limiter.Limiter
+	metrics     *metrics.Collector
 }
 
 // NewClientServer creates a new HTTP server.
-func NewClientServer(ctx context.Context, cfg *config.Config, r *repo.Repo, fStorage *s3.FileStorage) (*Server, error) {
+func NewClientServer(
+	ctx context.Context,
+	cfg *config.Config,
+	r *repo.Repo,
+	fStorage *s3.FileStorage,
+	metricsCollector *metrics.Collector,
+) (*Server, error) {
 	tmpl := template.Must(template.ParseFS(templateFS, "html/templates/*.html"))
 
 	tokenMaker, err := token.NewJWTMaker(&cfg.Token)
@@ -48,10 +56,10 @@ func NewClientServer(ctx context.Context, cfg *config.Config, r *repo.Repo, fSto
 		return nil, err
 	}
 
-	usr := user.NewUser(tmpl, usecase.NewUserService(r, fStorage, tokenMaker, tokenMakerCallBack))
+	usr := user.NewUser(tmpl, usecase.NewUserService(r, fStorage, tokenMaker, tokenMakerCallBack), metricsCollector)
 
 	// configure router
-	router := configureRouter(usr)
+	router := configureRouter(usr, metricsCollector)
 
 	//limiter
 	limiter := rate_limiter.NewRateLimiter(ctx, cfg.WebServer.RateLimiter)
@@ -61,6 +69,7 @@ func NewClientServer(ctx context.Context, cfg *config.Config, r *repo.Repo, fSto
 	handlerMux = middleware.AccessLogWithCtx(ctx, handlerMux)
 	handlerMux = middleware.Auth(tokenMaker, handlerMux)
 	handlerMux = middleware.CSRF(handlerMux)
+	handlerMux = middleware.CollectMetricsMiddleware(metricsCollector.Metrics, handlerMux)
 
 	srv := &http.Server{
 		Addr:         net.JoinHostPort(cfg.WebServer.Host, strconv.Itoa(cfg.WebServer.Port)),
@@ -87,7 +96,7 @@ func (s *Server) ListenAndServe(ctx context.Context) {
 	}
 }
 
-func configureRouter(u *user.User) *http.ServeMux {
+func configureRouter(u *user.User, metricsCollector *metrics.Collector) *http.ServeMux {
 	router := http.NewServeMux()
 	router.HandleFunc("GET /user/login", u.Handler.Login)
 
@@ -104,6 +113,8 @@ func configureRouter(u *user.User) *http.ServeMux {
 	router.HandleFunc("POST /api/v1/grader/callback", u.Handler.CallBack)
 
 	router.Handle("/swagger/", httpSwagger.WrapHandler)
+
+	router.Handle("/metrics/", metricsCollector.Handler.Metrics)
 
 	return router
 }

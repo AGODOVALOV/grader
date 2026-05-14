@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	server "github.com/AGODOVALOV/grader/pkg/client"
+	"github.com/AGODOVALOV/grader/pkg/client/metrics"
 	"github.com/AGODOVALOV/grader/pkg/client/outbox"
 	"github.com/AGODOVALOV/grader/pkg/client/user/repo"
 	"github.com/AGODOVALOV/grader/pkg/config"
@@ -60,8 +61,11 @@ func main() {
 		return
 	}
 
+	//init metrics collector
+	metricsCollector := metrics.NewCollector(ctx)
+
 	// init web server
-	srv, err := server.NewClientServer(ctx, appCfg.GetConfig(), repoDB, fStorage)
+	srv, err := server.NewClientServer(ctx, appCfg.GetConfig(), repoDB, fStorage, metricsCollector)
 	if err != nil {
 		z.Error(ctx, "create server", err.Error())
 		return

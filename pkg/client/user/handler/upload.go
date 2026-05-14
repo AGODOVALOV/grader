@@ -73,6 +73,8 @@ func (h *UserHandler) UploadTask(w http.ResponseWriter, r *http.Request) {
 		default:
 			writeHTTPError(r, w, err)
 		}
+		h.MetricsCollector.Metrics.UploadTotal.WithLabelValues("validation_error").Inc()
+		h.MetricsCollector.Metrics.UploadFileSize.WithLabelValues("validation_error").Observe(float64(header.Size))
 		return
 	}
 
@@ -82,6 +84,7 @@ func (h *UserHandler) UploadTask(w http.ResponseWriter, r *http.Request) {
 
 	err = h.Service.UploadFileToReviewS3(r.Context(), fileName, file, header.Size, eventID)
 	if err != nil {
+		h.MetricsCollector.Metrics.UploadTotal.WithLabelValues("s3_error").Inc()
 		logErrorRequestWithDump(r, err)
 		http.Error(w, "request error", http.StatusInternalServerError)
 		return
@@ -89,9 +92,14 @@ func (h *UserHandler) UploadTask(w http.ResponseWriter, r *http.Request) {
 
 	err = h.Service.CreateAndOutboxReviewTx(r.Context(), currSession.UserID, taskNum, fileName, eventID)
 	if err != nil {
+		h.MetricsCollector.Metrics.ReviewCreatedTotal.WithLabelValues("db_error").Inc()
 		writeHTTPError(r, w, err)
 		return
 	}
+
+	h.MetricsCollector.Metrics.UploadTotal.WithLabelValues("success").Inc()
+	h.MetricsCollector.Metrics.UploadFileSize.WithLabelValues("success").Observe(float64(header.Size))
+	h.MetricsCollector.Metrics.ReviewCreatedTotal.WithLabelValues("success").Inc()
 
 	http.Redirect(w, r, fmt.Sprintf("/user/account/%d", currSession.UserID), http.StatusFound)
 }

@@ -15,6 +15,7 @@ import (
 
 var noCSRFUrls = map[string]struct{}{
 	"/api/v1/grader/callback": {},
+	"metrics":                 {},
 }
 
 func CSRF(next http.Handler) http.Handler {

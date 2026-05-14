@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/AGODOVALOV/grader/pkg/dto"
+	"github.com/AGODOVALOV/grader/pkg/grader/metrics"
 	"github.com/AGODOVALOV/grader/pkg/grader/usecase"
 	"github.com/AGODOVALOV/grader/pkg/grader/workerpool"
 	"github.com/AGODOVALOV/grader/pkg/logger"
@@ -14,12 +15,14 @@ import (
 )
 
 type GraderHandler struct {
-	GraderService *usecase.GraderService
+	GraderService    *usecase.GraderService
+	MetricsCollector *metrics.Collector
 }
 
-func NewGraderHandler(fStorage *s3.FileStorage, tknMaker token.Maker, wp *workerpool.WorkerPool) *GraderHandler {
+func NewGraderHandler(fStorage *s3.FileStorage, tknMaker token.Maker, wp *workerpool.WorkerPool, metricsCollector *metrics.Collector) *GraderHandler {
 	return &GraderHandler{
-		GraderService: usecase.NewGraderService(fStorage, tknMaker, wp),
+		GraderService:    usecase.NewGraderService(fStorage, tknMaker, wp),
+		MetricsCollector: metricsCollector,
 	}
 }
 
