@@ -27,25 +27,6 @@ func AccessLogWithCtx(ctx context.Context, next http.Handler) http.Handler {
 // Auth middleware.
 func Auth(tokenMaker token.Maker, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		//tokenCookie, err := r.Cookie("access_token")
-		//if err != nil {
-		//	http.Error(w, "unauthorized", http.StatusUnauthorized)
-		//	return
-		//}
-		//
-		//tokenPayload, err := tokenMaker.VerifyToken(tokenCookie.Value)
-		//if err != nil {
-		//	http.Error(w, err.Error(), http.StatusUnauthorized)
-		//	return
-		//}
-		//
-		//sess := session.Session{
-		//	ID:     tokenPayload.ID,
-		//	UserID: tokenPayload.UserID,
-		//}
-		//ctx := context.WithValue(r.Context(), session.SessionKey, sess)
-		//next.ServeHTTP(w, r.WithContext(ctx))
-
 		next.ServeHTTP(w, r)
 	})
 }

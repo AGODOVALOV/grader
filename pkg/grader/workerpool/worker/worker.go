@@ -12,19 +12,22 @@ import (
 
 	"github.com/AGODOVALOV/grader/pkg/dto"
 	"github.com/AGODOVALOV/grader/pkg/grader/client"
+	"github.com/AGODOVALOV/grader/pkg/grader/metrics"
 	"github.com/AGODOVALOV/grader/pkg/logger"
 	"github.com/AGODOVALOV/grader/pkg/storage/s3"
 )
 
 type Worker struct {
-	fStorage       *s3.FileStorage
-	callBackClient *client.Client
+	fStorage         *s3.FileStorage
+	callBackClient   *client.Client
+	metricsCollector *metrics.Collector
 }
 
-func NewWorker(fStorage *s3.FileStorage, callBackClient *client.Client) *Worker {
+func NewWorker(fStorage *s3.FileStorage, callBackClient *client.Client, metricsCollector *metrics.Collector) *Worker {
 	return &Worker{
-		fStorage:       fStorage,
-		callBackClient: callBackClient,
+		fStorage:         fStorage,
+		callBackClient:   callBackClient,
+		metricsCollector: metricsCollector,
 	}
 }
 
@@ -45,6 +48,7 @@ func (w *Worker) DoJob(ctx context.Context, payload *dto.GraderPayload) error {
 	// get file from S3
 	fileData, err := w.fStorage.DownloadFile(ctx, fName)
 	if err != nil {
+		w.metricsCollector.Metrics.S3DownloadsTotal.WithLabelValues(payload.TaskID, "error").Inc()
 		return err
 	}
 
@@ -95,6 +99,10 @@ func (w *Worker) DoJob(ctx context.Context, payload *dto.GraderPayload) error {
 
 	volumePath = "./" + vPathHost + ":" + containerWorkdir + "/main.go"
 
+	dockerStart := time.Now()
+
+	w.metricsCollector.Metrics.DockerRunsTotal.WithLabelValues(payload.TaskID, "docker run").Inc()
+
 	cmd := exec.CommandContext(runCtx, "docker", "run",
 		"--rm",
 		"--network", "none",
@@ -105,6 +113,8 @@ func (w *Worker) DoJob(ctx context.Context, payload *dto.GraderPayload) error {
 		"grader:latest",
 		"go", "test",
 	)
+
+	w.metricsCollector.Metrics.DockerRunDuration.WithLabelValues(payload.TaskID, "docker run").Observe(time.Since(dockerStart).Seconds())
 
 	pass := true
 	out, err := cmd.CombinedOutput()
@@ -140,8 +150,11 @@ func (w *Worker) DoJob(ctx context.Context, payload *dto.GraderPayload) error {
 
 	err = w.callBackClient.DoCallbackRequestWithRetry(ctx, callBackPayloadBytes)
 	if err != nil {
+		w.metricsCollector.Metrics.CallbacksTotal.WithLabelValues(payload.TaskID, "error").Inc()
 		return err
 	}
+
+	w.metricsCollector.Metrics.CallbacksTotal.WithLabelValues(payload.TaskID, "success").Inc()
 
 	logger.Z(ctx).Debug(ctx, "callback sent", fmt.Sprintf("test for %s", fName), map[string]string{
 		"result": string(out),

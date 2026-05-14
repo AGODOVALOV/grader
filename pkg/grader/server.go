@@ -31,6 +31,7 @@ func NewGraderServer(ctx context.Context,
 	// add middleware
 	handlerMux := middleware.AccessLogWithCtx(ctx, router)
 	handlerMux = middleware.Auth(tokenMaker, handlerMux)
+	handlerMux = middleware.CollectMetricsMiddleware(graderProc.Handler.MetricsCollector.Metrics, handlerMux)
 
 	srv := &http.Server{
 		Addr:         net.JoinHostPort(cfg.Grader.Server.Host, strconv.Itoa(cfg.Grader.Server.Port)),

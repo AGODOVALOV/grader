@@ -52,6 +52,10 @@ func (h *GraderHandler) Grade(w http.ResponseWriter, r *http.Request) {
 
 	select {
 	case h.GraderService.WP.Tasks <- &targetPayload:
+
+		h.MetricsCollector.Metrics.JobsReceivedTotal.WithLabelValues(targetPayload.TaskID).Inc()
+		h.MetricsCollector.Metrics.WorkerQueueDepth.Set(float64(len(h.GraderService.WP.Tasks)))
+
 		w.WriteHeader(http.StatusOK)
 		return
 	case <-r.Context().Done():

@@ -3,11 +3,11 @@ package metrics
 import (
 	"context"
 
-	"github.com/AGODOVALOV/grader/pkg/client/metrics/handler"
+	"github.com/AGODOVALOV/grader/pkg/grader/metrics/handler"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 
-	"github.com/AGODOVALOV/grader/pkg/client/metrics/metrics"
+	"github.com/AGODOVALOV/grader/pkg/grader/metrics/metrics"
 )
 
 type Collector struct {
@@ -23,12 +23,16 @@ func NewCollector(ctx context.Context) *Collector {
 
 	reg.MustRegister(collectors.NewGoCollector(),
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-		//customMetrics.TaskProcessedByStatus,
-		//customMetrics.QueueDepthReadyMessages,
-		//customMetrics.TaskElapsedTimeBeforeProcess,
-		//customMetrics.TaskProcessingDuration,
-		//customMetrics.DBOpenConnections,
-		//customMetrics.DBIdleConnections,
+		customMetrics.HTTPRequestTotal,
+		customMetrics.HTTPRequestDuration,
+		customMetrics.JobsReceivedTotal,
+		customMetrics.JobsProcessedTotal,
+		customMetrics.JobDuration,
+		customMetrics.DockerRunsTotal,
+		customMetrics.DockerRunDuration,
+		customMetrics.S3DownloadsTotal,
+		customMetrics.CallbacksTotal,
+		customMetrics.WorkerQueueDepth,
 	)
 
 	return &Collector{

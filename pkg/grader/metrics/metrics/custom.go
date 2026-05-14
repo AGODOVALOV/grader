@@ -3,55 +3,124 @@ package metrics
 import "github.com/prometheus/client_golang/prometheus"
 
 type CustomMetrics struct {
-	TaskProcessedByStatus        *prometheus.CounterVec
-	QueueDepthReadyMessages      *prometheus.GaugeVec
-	TaskElapsedTimeBeforeProcess *prometheus.HistogramVec
-	TaskProcessingDuration       *prometheus.HistogramVec
-	DBOpenConnections            prometheus.Gauge
-	DBIdleConnections            prometheus.Gauge
+	HTTPRequestTotal    *prometheus.CounterVec
+	HTTPRequestDuration *prometheus.HistogramVec
+
+	JobsReceivedTotal  *prometheus.CounterVec
+	JobsProcessedTotal *prometheus.CounterVec
+	JobDuration        *prometheus.HistogramVec
+
+	DockerRunsTotal   *prometheus.CounterVec
+	DockerRunDuration *prometheus.HistogramVec
+
+	S3DownloadsTotal *prometheus.CounterVec
+
+	CallbacksTotal *prometheus.CounterVec
+
+	WorkerQueueDepth prometheus.Gauge
 }
 
 func NewCustomMetrics() *CustomMetrics {
 	return &CustomMetrics{
-		TaskProcessedByStatus: prometheus.NewCounterVec(
+		HTTPRequestTotal: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
-				Name: "qproc_tasks_processed_total",
-				Help: "Number of tasks processed per status",
+				Name: "grader_http_requests_total",
+				Help: "Total number of grader HTTP requests",
 			},
-			[]string{"status"},
+			[]string{"method", "path", "status"},
 		),
-		//QueueDepthReadyMessages: prometheus.NewGaugeVec(
-		//	prometheus.GaugeOpts{
-		//		Name: "qproc_queue_messages_ready",
-		//		Help: "Number of ready messages in the queue",
-		//	},
-		//	[]string{"queue"},
-		//),
-		//TaskElapsedTimeBeforeProcess: prometheus.NewHistogramVec(
-		//	prometheus.HistogramOpts{
-		//		Name: "qproc_task_elapsed_time_before_process",
-		//		Help: "Time elapsed before task processing",
-		//	},
-		//	[]string{"queue"},
-		//),
-		//TaskProcessingDuration: prometheus.NewHistogramVec(
-		//	prometheus.HistogramOpts{
-		//		Name: "qproc_task_processing_duration_seconds",
-		//		Help: "Time processing task",
-		//	},
-		//	[]string{"code", "queue"},
-		//),
-		//DBOpenConnections: prometheus.NewGauge(
-		//	prometheus.GaugeOpts{
-		//		Name: "qproc_db_open_connections",
-		//		Help: "Number of open database connections",
-		//	},
-		//),
-		//DBIdleConnections: prometheus.NewGauge(
-		//	prometheus.GaugeOpts{
-		//		Name: "qproc_db_idle_connections",
-		//		Help: "Number of idle database connections",
-		//	},
-		//),
+
+		HTTPRequestDuration: prometheus.NewHistogramVec(
+			prometheus.HistogramOpts{
+				Name:    "grader_http_request_duration_seconds",
+				Help:    "Grader HTTP request duration in seconds",
+				Buckets: prometheus.DefBuckets,
+			},
+			[]string{"method", "path", "status"},
+		),
+
+		JobsReceivedTotal: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "grader_jobs_received_total",
+				Help: "Total number of grader jobs received",
+			},
+			[]string{"task"},
+		),
+
+		JobsProcessedTotal: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "grader_jobs_processed_total",
+				Help: "Total number of grader jobs processed",
+			},
+			[]string{"task", "result"},
+		),
+
+		JobDuration: prometheus.NewHistogramVec(
+			prometheus.HistogramOpts{
+				Name: "grader_job_duration_seconds",
+				Help: "Total grader job processing duration in seconds",
+				Buckets: []float64{
+					0.1,
+					0.5,
+					1,
+					2,
+					5,
+					10,
+					30,
+					60,
+					120,
+				},
+			},
+			[]string{"task", "result"},
+		),
+
+		DockerRunsTotal: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "grader_docker_runs_total",
+				Help: "Total number of docker test runs",
+			},
+			[]string{"task"},
+		),
+
+		DockerRunDuration: prometheus.NewHistogramVec(
+			prometheus.HistogramOpts{
+				Name: "grader_docker_run_duration_seconds",
+				Help: "Docker test run duration in seconds",
+				Buckets: []float64{
+					0.1,
+					0.5,
+					1,
+					2,
+					5,
+					10,
+					30,
+					60,
+				},
+			},
+			[]string{"task"},
+		),
+
+		S3DownloadsTotal: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "grader_s3_downloads_total",
+				Help: "Total number of S3 download attempts",
+			},
+			[]string{"task", "result"},
+		),
+
+		CallbacksTotal: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "grader_callbacks_total",
+				Help: "Total number of callback requests",
+			},
+			[]string{"task", "result"},
+		),
+
+		WorkerQueueDepth: prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Name: "grader_worker_queue_depth",
+				Help: "Current number of jobs waiting in grader worker queue",
+			},
+		),
 	}
 }
