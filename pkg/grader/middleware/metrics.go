@@ -32,7 +32,7 @@ func CollectMetricsMiddleware(m *metrics.CustomMetrics, next http.Handler) http.
 		status := strconv.Itoa(ww.statusCode)
 		duration := time.Since(start).Seconds()
 
-		m.HTTPRequestTotal.WithLabelValues(r.Method, r.URL.Path, status).Inc()
-		m.HTTPRequestDuration.WithLabelValues(r.Method, r.URL.Path, status).Observe(duration)
+		m.HTTPRequestTotal.WithLabelValues(r.Method, r.Pattern, status).Inc()
+		m.HTTPRequestDuration.WithLabelValues(r.Method, r.Pattern, status).Observe(duration)
 	})
 }

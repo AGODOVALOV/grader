@@ -48,9 +48,10 @@ func (w *Worker) DoJob(ctx context.Context, payload *dto.GraderPayload) error {
 	// get file from S3
 	fileData, err := w.fStorage.DownloadFile(ctx, fName)
 	if err != nil {
-		w.metricsCollector.Metrics.S3DownloadsTotal.WithLabelValues(payload.TaskID, "error").Inc()
 		return err
 	}
+
+	w.metricsCollector.Metrics.S3DownloadsTotal.WithLabelValues("s3 download").Inc()
 
 	fName = fName + ".tst"
 
@@ -101,7 +102,7 @@ func (w *Worker) DoJob(ctx context.Context, payload *dto.GraderPayload) error {
 
 	dockerStart := time.Now()
 
-	w.metricsCollector.Metrics.DockerRunsTotal.WithLabelValues(payload.TaskID, "docker run").Inc()
+	w.metricsCollector.Metrics.DockerRunsTotal.WithLabelValues("docker run").Inc()
 
 	cmd := exec.CommandContext(runCtx, "docker", "run",
 		"--rm",
@@ -150,11 +151,10 @@ func (w *Worker) DoJob(ctx context.Context, payload *dto.GraderPayload) error {
 
 	err = w.callBackClient.DoCallbackRequestWithRetry(ctx, callBackPayloadBytes)
 	if err != nil {
-		w.metricsCollector.Metrics.CallbacksTotal.WithLabelValues(payload.TaskID, "error").Inc()
 		return err
 	}
 
-	w.metricsCollector.Metrics.CallbacksTotal.WithLabelValues(payload.TaskID, "success").Inc()
+	w.metricsCollector.Metrics.CallbacksTotal.WithLabelValues("grader callback ").Inc()
 
 	logger.Z(ctx).Debug(ctx, "callback sent", fmt.Sprintf("test for %s", fName), map[string]string{
 		"result": string(out),

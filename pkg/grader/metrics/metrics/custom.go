@@ -52,7 +52,7 @@ func NewCustomMetrics() *CustomMetrics {
 				Name: "grader_jobs_processed_total",
 				Help: "Total number of grader jobs processed",
 			},
-			[]string{"task", "result"},
+			[]string{"task"},
 		),
 
 		JobDuration: prometheus.NewHistogramVec(
@@ -105,7 +105,7 @@ func NewCustomMetrics() *CustomMetrics {
 				Name: "grader_s3_downloads_total",
 				Help: "Total number of S3 download attempts",
 			},
-			[]string{"task", "result"},
+			[]string{"task"},
 		),
 
 		CallbacksTotal: prometheus.NewCounterVec(
@@ -113,7 +113,7 @@ func NewCustomMetrics() *CustomMetrics {
 				Name: "grader_callbacks_total",
 				Help: "Total number of callback requests",
 			},
-			[]string{"task", "result"},
+			[]string{"task"},
 		),
 
 		WorkerQueueDepth: prometheus.NewGauge(
