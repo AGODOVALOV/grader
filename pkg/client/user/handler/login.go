@@ -26,6 +26,7 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	err := h.template.ExecuteTemplate(w, "login.html", nil)
 	if err != nil {
 		logErrorRequestWithDump(r, err)
+		http.Error(w, ErrTemplateRender.Error(), http.StatusInternalServerError)
 	}
 	return
 }

@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/AGODOVALOV/grader/pkg/client/session"
-	"github.com/AGODOVALOV/grader/pkg/logger"
 )
 
 // Account godoc
@@ -38,7 +37,7 @@ func (h *UserHandler) Account(w http.ResponseWriter, r *http.Request) {
 	err = h.template.ExecuteTemplate(w, "account.html", data)
 	if err != nil {
 		logErrorRequestWithDump(r, err)
-		logger.Z(r.Context()).Error(r.Context(), "render account page", err.Error())
+		http.Error(w, ErrTemplateRender.Error(), http.StatusInternalServerError)
 		return
 	}
 }

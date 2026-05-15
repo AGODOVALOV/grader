@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"github.com/AGODOVALOV/grader/pkg/client/session"
-	"github.com/AGODOVALOV/grader/pkg/logger"
 )
 
 // Admin godoc
@@ -44,7 +43,8 @@ func (h *UserHandler) Admin(w http.ResponseWriter, r *http.Request) {
 
 	err = h.template.ExecuteTemplate(w, "admin.html", data)
 	if err != nil {
-		logger.Z(r.Context()).Error(r.Context(), "render account page", err.Error())
+		logErrorRequestWithDump(r, err)
+		http.Error(w, ErrTemplateRender.Error(), http.StatusInternalServerError)
 		return
 	}
 }

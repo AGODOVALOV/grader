@@ -17,33 +17,34 @@ type Outbox struct {
 	userService *usecase.UserService
 	cfg         *config.Config
 	wg          *sync.WaitGroup
+	rConn       *amqp.Connection
 }
 
 // NewOutbox creates a new outbox.
-func NewOutbox(user *user.User, cfg *config.Config) *Outbox {
+func NewOutbox(ctx context.Context, user *user.User, cfg *config.Config) (*Outbox, error) {
+	rConn, err := amqp.Dial(cfg.Broker.Rabbit.URL)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Outbox{
 		userService: user.Handler.Service,
 		cfg:         cfg,
 		wg:          &sync.WaitGroup{},
-	}
+		rConn:       rConn,
+	}, nil
 }
 
 // StartSending starts sending messages.
 func (out *Outbox) StartSending(ctx context.Context) error {
-	rConn, err := amqp.Dial(out.cfg.Broker.Rabbit.URL)
-	if err != nil {
-		logger.Z(ctx).Error(ctx, "rabbit connection", err.Error())
-		return err
-	}
-
 	defer func(rConn *amqp.Connection) {
 		err := rConn.Close()
 		if err != nil {
 			logger.Z(ctx).Error(ctx, "rabbit connection close", err.Error())
 		}
-	}(rConn)
+	}(out.rConn)
 
-	rCh, err := rConn.Channel()
+	rCh, err := out.rConn.Channel()
 
 	defer func(rCh *amqp.Channel) {
 		err := rCh.Close()

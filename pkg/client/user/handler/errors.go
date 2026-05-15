@@ -25,6 +25,7 @@ var (
 	ErrInvalidData             = errors.New("invalid data")
 	ErrDatabaseError           = errors.New("database error")
 	ErrDatabaseConnectionError = errors.New("database connection error")
+	ErrTemplateRender          = errors.New("template render error")
 )
 
 func mapDBError(err error) error {
