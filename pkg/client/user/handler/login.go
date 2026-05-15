@@ -27,8 +27,8 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		logErrorRequestWithDump(r, err)
 		http.Error(w, ErrTemplateRender.Error(), http.StatusInternalServerError)
+		return
 	}
-	return
 }
 
 // LoginUser godoc
@@ -91,12 +91,12 @@ func (h *UserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 		Expires:  payload.ExpiredAt,
 	})
 
+	h.MetricsCollector.Metrics.LoginAttemptsTotal.WithLabelValues("success").Inc()
+
 	if isAdmin {
 		http.Redirect(w, r, "/admin", http.StatusFound)
 		return
 	}
-
-	h.MetricsCollector.Metrics.LoginAttemptsTotal.WithLabelValues("success").Inc()
 
 	http.Redirect(w, r, fmt.Sprintf("/user/account/%d", userID), http.StatusFound)
 }

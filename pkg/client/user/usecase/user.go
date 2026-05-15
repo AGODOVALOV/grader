@@ -31,7 +31,8 @@ import (
 
 const (
 	maxUploadFileSize = 1 << 20 // 1 MB
-	defaultFileName   = "main.go"
+	goLanguage        = "go"
+	// other like python and ...
 )
 
 var (
@@ -586,15 +587,23 @@ func (s *UserService) ProcessGraderCallback(ctx context.Context, payload *dtogra
 }
 
 func (s *UserService) ValidateUploadFile(ctx context.Context, id int64, file multipart.File, header *multipart.FileHeader) error {
-	_, err := s.repo.Queries.GetTaskNumberByID(ctx, int32(id))
+	task, err := s.repo.Queries.GetTaskByID(ctx, int32(id))
 	if err != nil {
 		return err
 	}
 
-	if filepath.Base(header.Filename) != defaultFileName {
+	if filepath.Base(header.Filename) != task.TargetFileName.String {
 		return ErrInvalidUploadFileName
 	}
 
+	if task.TargetFileValidation.Bool {
+		return validateFileByConditions(task.TargetFileValidationLanguage.String, file, header)
+	}
+
+	return nil
+}
+
+func validateFileByConditions(lang string, file multipart.File, header *multipart.FileHeader) error {
 	if header.Size <= 0 {
 		return ErrEmptyUploadFile
 	}
@@ -603,14 +612,17 @@ func (s *UserService) ValidateUploadFile(ctx context.Context, id int64, file mul
 		return ErrUploadFileTooLarge
 	}
 
-	if err := validateGoSourceFile(file); err != nil {
-		return err
+	switch lang {
+	case goLanguage:
+		return validateGoSourceFile(file, header)
+		// case otherLanguage:
+		// 	return validateOtherLanguageSourceFile(file)
 	}
 
 	return nil
 }
 
-func validateGoSourceFile(file multipart.File) error {
+func validateGoSourceFile(file multipart.File, header *multipart.FileHeader) error {
 	content, err := io.ReadAll(file)
 	if err != nil {
 		return err
@@ -621,7 +633,7 @@ func validateGoSourceFile(file multipart.File) error {
 	}
 
 	fileSet := token.NewFileSet()
-	parsedFile, err := parser.ParseFile(fileSet, defaultFileName, content, parser.AllErrors)
+	parsedFile, err := parser.ParseFile(fileSet, header.Filename, content, parser.AllErrors)
 	if err != nil {
 		return ErrInvalidGoFile
 	}

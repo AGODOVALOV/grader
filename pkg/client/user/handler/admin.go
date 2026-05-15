@@ -28,6 +28,7 @@ func (h *UserHandler) Admin(w http.ResponseWriter, r *http.Request) {
 	isAdmin, err := h.Service.CheckUserIsAdminByUserID(r.Context(), currSession.UserID)
 	if err != nil {
 		writeHTTPError(r, w, err)
+		return
 	}
 
 	if !isAdmin {
@@ -73,6 +74,7 @@ func (h *UserHandler) UpdateReviewAdmin(w http.ResponseWriter, r *http.Request) 
 	isAdmin, err := h.Service.CheckUserIsAdminByUserID(r.Context(), currSession.UserID)
 	if err != nil {
 		writeHTTPError(r, w, err)
+		return
 	}
 
 	if !isAdmin {

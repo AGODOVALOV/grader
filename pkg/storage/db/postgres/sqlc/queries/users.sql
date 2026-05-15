@@ -187,3 +187,8 @@ WHERE id = $2
 SELECT id, name
 from tasks
 where id = $1;
+
+-- name: GetTaskByID :one
+SELECT id, name, target_file_name, target_file_validation, target_file_validation_language
+from tasks
+where id = $1;

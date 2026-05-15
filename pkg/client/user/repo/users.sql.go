@@ -457,15 +457,39 @@ func (q *Queries) GetReviewsByUserID(ctx context.Context, id int64) ([]GetReview
 	return items, nil
 }
 
+const getTaskByID = `-- name: GetTaskByID :one
+SELECT id, name, target_file_name, target_file_validation, target_file_validation_language
+from tasks
+where id = $1
+`
+
+func (q *Queries) GetTaskByID(ctx context.Context, id int32) (Task, error) {
+	row := q.db.QueryRow(ctx, getTaskByID, id)
+	var i Task
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.TargetFileName,
+		&i.TargetFileValidation,
+		&i.TargetFileValidationLanguage,
+	)
+	return i, err
+}
+
 const getTaskNumberByID = `-- name: GetTaskNumberByID :one
 SELECT id, name
 from tasks
 where id = $1
 `
 
-func (q *Queries) GetTaskNumberByID(ctx context.Context, id int32) (Task, error) {
+type GetTaskNumberByIDRow struct {
+	ID   int32
+	Name pgtype.Text
+}
+
+func (q *Queries) GetTaskNumberByID(ctx context.Context, id int32) (GetTaskNumberByIDRow, error) {
 	row := q.db.QueryRow(ctx, getTaskNumberByID, id)
-	var i Task
+	var i GetTaskNumberByIDRow
 	err := row.Scan(&i.ID, &i.Name)
 	return i, err
 }

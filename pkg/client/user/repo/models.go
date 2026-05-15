@@ -127,8 +127,11 @@ type Review struct {
 }
 
 type Task struct {
-	ID   int32
-	Name pgtype.Text
+	ID                           int32
+	Name                         pgtype.Text
+	TargetFileName               pgtype.Text
+	TargetFileValidation         pgtype.Bool
+	TargetFileValidationLanguage pgtype.Text
 }
 
 type User struct {

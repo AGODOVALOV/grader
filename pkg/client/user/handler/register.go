@@ -18,6 +18,6 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		logErrorRequestWithDump(r, err)
 		http.Error(w, ErrTemplateRender.Error(), http.StatusInternalServerError)
+		return
 	}
-	return
 }
