@@ -32,7 +32,21 @@ func CollectMetricsMiddleware(m *metrics.CustomMetrics, next http.Handler) http.
 		status := strconv.Itoa(ww.statusCode)
 		duration := time.Since(start).Seconds()
 
-		m.HTTPRequestTotal.WithLabelValues(r.Method, r.Pattern, status).Inc()
-		m.HTTPRequestDuration.WithLabelValues(r.Method, r.Pattern, status).Observe(duration)
+		if path := matchMetricPath(r); path != "" {
+			m.HTTPRequestTotal.WithLabelValues(r.Method, path, status).Inc()
+			m.HTTPRequestDuration.WithLabelValues(r.Method, path, status).Observe(duration)
+		}
 	})
+}
+
+func matchMetricPath(r *http.Request) string {
+	if r.Pattern != "" {
+		return r.Pattern
+	}
+	switch {
+	case r.URL.Path == "/api/v1/grader":
+		return "/api/v1/grader"
+	default:
+		return ""
+	}
 }
