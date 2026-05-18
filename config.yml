@@ -1,0 +1,88 @@
+app:
+  name: grader
+
+log:
+  level: debug
+  encoding: json
+  name: grader
+
+web-server:
+  host: localhost
+  port: 8080
+  read-timeout: 10s
+  write-timeout: 10s
+  idle-timeout: 60s
+  shutdown-timeout: 5s
+  rate-limiter:
+    type: fixed_window
+    max-requests: 10
+    interval: 1s
+
+token:
+  secret: 3z9KfP8vQwX2mLr7TnY5uB1sD4eH6jA0cVxRkUqWZpM=
+  duration: 40m
+
+postgres:
+  host: localhost
+  port: 5432
+  user: postgres
+  password: postgres
+  db-name: grader
+  ssl-mode: disable
+  time-zone: UTC
+  pool:
+    max-open-conns: 25
+    max-idle-conns: 10
+    conn-max-lifetime: 1h
+    conn-max-idletime: 30m
+
+s3-minio:
+  endpoint: localhost:9000
+  access-key: minioadmin
+  secret-key: minioadmin
+  bucket: grader
+  use-ssl: false
+
+grader:
+  url: http://localhost:8022/api/v1/grader
+  container: hw_checker
+  workers: 3
+  server:
+    host: localhost
+    port: 8022
+    read-timeout: 10s
+    write-timeout: 10s
+    idle-timeout: 60s
+    shutdown-timeout: 5s
+  http-client:
+    callback-url: http://localhost:8080/api/v1/grader/callback
+    timeout: 5s
+    max-idle-conns: 50
+    idle-conn-timeout: 90s
+    task-delay: 20s
+    retry:
+      max-attempts: 3
+      backoff: 200ms
+      backoff-max: 2s
+    token:
+      secret: b7Fq2LxP9ZsWcR4mY8KjTnV1uH0eD5A3QwXr6BpUfMg=
+      duration: 2m
+
+message-queue:
+  broker:
+    active: rabbit
+    rabbit:
+      url: amqp://guest:guest@localhost:5672/
+      exchange-type: direct
+      durable: true
+      prefetch: 20
+      auto_declare: true
+  messaging:
+    channels:
+      - name: grader
+        target: http://localhost:8021
+        api-path: /api/v1/grader
+        rate-limiter:
+          type: token_bucket
+          max-requests: 100
+          interval: 1s

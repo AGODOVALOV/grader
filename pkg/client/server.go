@@ -1,0 +1,120 @@
+// Package client provides an HTTP server.
+package client
+
+import (
+	"context"
+	"embed"
+	"html/template"
+	"net"
+	"net/http"
+	"strconv"
+
+	_ "github.com/AGODOVALOV/grader/docs/swagger" // required to register generated Swagger docs via init()
+	"github.com/AGODOVALOV/grader/pkg/client/metrics"
+	"github.com/AGODOVALOV/grader/pkg/client/middleware"
+	"github.com/AGODOVALOV/grader/pkg/client/user"
+	"github.com/AGODOVALOV/grader/pkg/client/user/repo"
+	"github.com/AGODOVALOV/grader/pkg/client/user/usecase"
+	"github.com/AGODOVALOV/grader/pkg/config/config"
+	"github.com/AGODOVALOV/grader/pkg/logger"
+	"github.com/AGODOVALOV/grader/pkg/rate_limiter"
+	"github.com/AGODOVALOV/grader/pkg/storage/s3"
+	"github.com/AGODOVALOV/grader/pkg/token"
+	tokenconfig "github.com/AGODOVALOV/grader/pkg/token/config"
+	"github.com/swaggo/http-swagger"
+)
+
+//go:embed html/templates/*.html
+var templateFS embed.FS
+
+// Server represents the HTTP server.
+type Server struct {
+	server      *http.Server
+	User        *user.User
+	token       token.Maker
+	rateLimiter rate_limiter.Limiter
+	metrics     *metrics.Collector
+}
+
+// NewClientServer creates a new HTTP server.
+func NewClientServer(
+	ctx context.Context,
+	cfg *config.Config,
+	r *repo.Repo,
+	fStorage *s3.FileStorage,
+	metricsCollector *metrics.Collector,
+) (*Server, error) {
+	tmpl := template.Must(template.ParseFS(templateFS, "html/templates/*.html"))
+
+	tokenMaker, err := token.NewJWTMaker(&cfg.Token)
+	if err != nil {
+		return nil, err
+	}
+
+	tokenMakerCallBack, err := token.NewJWTMaker((*tokenconfig.Config)(&cfg.Grader.Callback.JWT))
+	if err != nil {
+		return nil, err
+	}
+
+	usr := user.NewUser(tmpl, usecase.NewUserService(r, fStorage, tokenMaker, tokenMakerCallBack), metricsCollector)
+
+	// configure router
+	router := configureRouter(usr, metricsCollector)
+
+	//limiter
+	limiter := rate_limiter.NewRateLimiter(ctx, cfg.WebServer.RateLimiter)
+
+	// add middleware
+	handlerMux := middleware.GlobalRateLimit(limiter, router)
+	handlerMux = middleware.AccessLogWithCtx(ctx, handlerMux)
+	handlerMux = middleware.Auth(tokenMaker, handlerMux)
+	handlerMux = middleware.CSRF(handlerMux)
+	handlerMux = middleware.CollectMetricsMiddleware(metricsCollector.Metrics, handlerMux)
+
+	srv := &http.Server{
+		Addr:         net.JoinHostPort(cfg.WebServer.Host, strconv.Itoa(cfg.WebServer.Port)),
+		Handler:      handlerMux,
+		ReadTimeout:  cfg.WebServer.ReadTimeout,
+		WriteTimeout: cfg.WebServer.WriteTimeout,
+		IdleTimeout:  cfg.WebServer.IdleTimeout,
+	}
+
+	return &Server{
+		server:      srv,
+		User:        usr,
+		token:       tokenMaker,
+		rateLimiter: limiter,
+	}, nil
+}
+
+// ListenAndServe starts the HTTP server.
+func (s *Server) ListenAndServe(ctx context.Context) {
+	const op = "server.ListenAndServe"
+	err := s.server.ListenAndServe()
+	if err != nil {
+		logger.Z(ctx).Error(ctx, op, err.Error())
+	}
+}
+
+func configureRouter(u *user.User, metricsCollector *metrics.Collector) *http.ServeMux {
+	router := http.NewServeMux()
+	router.HandleFunc("GET /user/login", u.Handler.Login)
+
+	router.HandleFunc("GET /admin", u.Handler.Admin)
+	router.HandleFunc("POST /admin/review/update", u.Handler.UpdateReviewAdmin)
+
+	router.HandleFunc("GET /user/register", u.Handler.Register)
+	router.HandleFunc("GET /user/account/{userID}", u.Handler.Account)
+
+	router.HandleFunc("POST /user/create", u.Handler.CreateUser)
+	router.HandleFunc("POST /user/login", u.Handler.LoginUser)
+
+	router.HandleFunc("POST /task/review", u.Handler.UploadTask)
+	router.HandleFunc("POST /api/v1/grader/callback", u.Handler.CallBack)
+
+	router.Handle("/swagger/", httpSwagger.WrapHandler)
+
+	router.Handle("/metrics/", metricsCollector.Handler.Metrics)
+
+	return router
+}

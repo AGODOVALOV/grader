@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css">
+    <title>Grader registration</title>
+</head>
+<body>
+<div class="container mt-5">
+    <h1>Grader registration</h1>
+    <form method="POST" action="/user/create">
+        <input type="hidden" name="_csrf" id="csrf-token">
+        <div class="form-group">
+            <label for="login">Login</label>
+            <input type="text" class="form-control" name="login" id="login" placeholder="Enter login" required>
+        </div>
+        <div class="form-group">
+            <label for="name">Name</label>
+            <input type="text" class="form-control" name="name" id="name" placeholder="Enter name" required>
+        </div>
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" class="form-control" name="password" id="password"
+                   placeholder="Enter password" required>
+        </div>
+        <div class="form-group">
+            <label for="confirm_password">Confirm Password</label>
+            <input type="password" class="form-control" name="confirm_password" id="confirm_password"
+                   placeholder="Confirm password" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Register</button>
+    </form>
+    <script>
+        function getCookie(name) {
+            return document.cookie
+                .split("; ")
+                .find(row => row.startsWith(name + "="))
+                ?.split("=")[1];
+        }
+
+        document.getElementById("csrf-token").value = getCookie("csrf_token") || "";
+    </script>
+</div>
+
+<script>
+    const password = document.getElementById("password");
+    const confirm = document.getElementById("confirm_password");
+
+    function validatePasswords() {
+        if (password.value !== confirm.value) {
+            confirm.setCustomValidity("Passwords do not match");
+        } else {
+            confirm.setCustomValidity("");
+        }
+    }
+
+    password.addEventListener("input", validatePasswords);
+    confirm.addEventListener("input", validatePasswords);
+</script>
+</body>
+</html>

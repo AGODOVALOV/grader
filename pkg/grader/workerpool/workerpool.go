@@ -1,0 +1,78 @@
+package workerpool
+
+import (
+	"context"
+	"sync"
+
+	"github.com/AGODOVALOV/grader/pkg/config/config"
+	"github.com/AGODOVALOV/grader/pkg/dto"
+	"github.com/AGODOVALOV/grader/pkg/grader/client"
+	graderconfig "github.com/AGODOVALOV/grader/pkg/grader/config"
+	"github.com/AGODOVALOV/grader/pkg/grader/metrics"
+	"github.com/AGODOVALOV/grader/pkg/grader/workerpool/worker"
+	"github.com/AGODOVALOV/grader/pkg/logger"
+	"github.com/AGODOVALOV/grader/pkg/storage/s3"
+	"github.com/AGODOVALOV/grader/pkg/token"
+	tokenconfig "github.com/AGODOVALOV/grader/pkg/token/config"
+)
+
+type WorkerPool struct {
+	cfg              *graderconfig.Config
+	Tasks            chan *dto.GraderPayload
+	wg               *sync.WaitGroup
+	worker           *worker.Worker
+	token            token.Maker
+	metricsCollector *metrics.Collector
+}
+
+func NewWorkerPool(ctx context.Context,
+	cfg *config.Config,
+	fStorage *s3.FileStorage,
+	metricsCollector *metrics.Collector,
+) *WorkerPool {
+	tokenMaker, err := token.NewJWTMaker((*tokenconfig.Config)(&cfg.Grader.Callback.JWT))
+	if err != nil {
+		logger.Z(ctx).Error(ctx, "init token maker", err.Error())
+	}
+
+	return &WorkerPool{
+		Tasks:            make(chan *dto.GraderPayload, cfg.Grader.Workers*20),
+		cfg:              &cfg.Grader,
+		wg:               &sync.WaitGroup{},
+		worker:           worker.NewWorker(fStorage, client.NewClient(&cfg.Grader.Callback, tokenMaker), metricsCollector),
+		token:            tokenMaker,
+		metricsCollector: metricsCollector,
+	}
+}
+
+func (wp *WorkerPool) StartProcessingGradeTasks(ctx context.Context) {
+	for range wp.cfg.Workers {
+		wp.wg.Go(func() {
+			wp.ProcessTask(ctx, wp.Tasks)
+		})
+	}
+}
+
+func (wp *WorkerPool) ProcessTask(ctx context.Context, ch <-chan *dto.GraderPayload) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case v, ok := <-ch:
+			if !ok {
+				return
+			}
+			err := wp.worker.DoJob(ctx, v)
+			if err != nil {
+				logger.Z(ctx).Error(ctx, "grader processing new task", err.Error(), map[string]string{
+					"userID":   v.UserID,
+					"reviewID": v.ReviewID,
+				})
+			}
+		}
+	}
+}
+
+func (wp *WorkerPool) Wait() {
+	wp.wg.Wait()
+}

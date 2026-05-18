@@ -1,0 +1,8 @@
+docker build -t grader:latest .
+
+docker run --rm -it --network none -v "./submission/1/main.go:/app/1/game/main.go" --workdir /app/1/game grader:latest go test
+echo $?
+124 - timeout happened
+137 - killed (SIGKILL, often timeout or OOM)
+
+docker run --rm -it -v "./submission/1/main_tst.go:/app/1/game/main.go" --workdir /app/1/game grader:latest go test
