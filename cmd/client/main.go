@@ -50,14 +50,14 @@ func main() {
 	// init db
 	repoDB, err := repo.NewRepo(ctx, appCfg.GetConfig())
 	if err != nil {
-		z.Error(ctx, "DB connection", err.Error())
+		z.Fatal(ctx, "DB connection", err.Error())
 		return
 	}
 
 	// init file storage
 	fStorage, err := s3.NewFileStorage(ctx, &appCfg.GetConfig().FileStorage)
 	if err != nil {
-		z.Error(ctx, "init file storage", err.Error())
+		z.Fatal(ctx, "init file storage", err.Error())
 		return
 	}
 
@@ -67,21 +67,21 @@ func main() {
 	// init web server
 	srv, err := server.NewClientServer(ctx, appCfg.GetConfig(), repoDB, fStorage, metricsCollector)
 	if err != nil {
-		z.Error(ctx, "create server", err.Error())
+		z.Fatal(ctx, "create server", err.Error())
 		return
 	}
 
 	// start outbox transfer
 	outboxTransfer, err := outbox.NewOutbox(ctx, srv.User, &appCfg.GetConfig().MsgQueue)
 	if err != nil {
-		z.Error(ctx, "starting outbox process", err.Error())
+		z.Fatal(ctx, "starting outbox process", err.Error())
 		return
 	}
 
 	go func() {
 		err = outboxTransfer.StartSending(ctx)
 		if err != nil {
-			z.Error(ctx, "start outbox transfer", err.Error())
+			z.Fatal(ctx, "start outbox transfer", err.Error())
 			return
 		}
 	}()
